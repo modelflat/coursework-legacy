@@ -1,0 +1,53 @@
+Each fractal (at least in this work) is drawn with help of Random Iterations Method.
+An algorithm for drawing could be defined as following:
+
+on each computing unit do:
+    x0, y0 = pick random staring point on 2d bounded plane
+    for i in range(maximum steps):
+        put point x0, y0 on image
+        x0, y0 = function(x0, y0) [1] // compute next point based on previous
+
+as all units done computing:
+    display image
+
+Here, function [1] depends on nature of fractal. In this work, Newton's fractal is considered.
+Thus, function [1] could be defined as following:
+
+// a = 3 - t; b = -3 * (x0 + y0 j); c = 0; d = -t*C
+
+compute next point (x prev, y prev):
+    p = a;
+    cmul(&p, a); // p = a**2
+    p = b - (p / 3);
+    //
+    q = a;
+    q = (C + a**3 * (2 / 27)) - a * b / 3
+    root of D = (q ** 2 / 4 + p ** 3 / 27) ** .5 [0]
+    alpha = (-q / 2 - root of D) ** (1 / 3) // array
+    beta = (-q / 2 + root of D) ** (1 / 3)
+    // find single beta:
+    idx = 0;
+    for b in beta:
+        r = alpha[0] * b + p / 3
+        if (r approaches 0):
+            break;
+        ++idx;
+
+    if (idx == 3):
+        // beta not found, do some research to determine actions in this case
+
+    root idx = random(0, 2)
+
+    switch (root idx):
+    case 0:
+        return alpha[0] + beta[idx] - a / 3
+    case 1:
+        return alpha[1] + beta[idx] * (1 ** 1/3 [1]) - a / 3
+    case 2:
+        return alpha[2] + beta[idx] * (1 ** 1/3 [2]) - a / 3
+
+Here, cubic equationis being solved with use of Cardano formulas, and random root is selected
+as the next point of fractal object.
+
+
+
