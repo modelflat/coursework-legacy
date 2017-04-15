@@ -4,10 +4,7 @@ import org.testng.annotations.*;
 import org.testng.internal.collections.Pair;
 
 import java.io.*;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.DoubleBuffer;
-import java.nio.FloatBuffer;
+import java.nio.*;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
@@ -18,21 +15,29 @@ import static org.testng.Assert.assertNotEquals;
 /**
  * Created on 13.04.2017.
  */
+
 public class TestOpenCLComplexArithmetic {
 
     private CLContext context;
     private CLCommandQueue queue;
     private CLDevice device;
 
-    private static final float D = 1e-5f;
+    private static final int CL_PLATFORM_IDX = 1;
+
+    private static float D;
     private static final int DATA_SIZE = 1024;
 
     @BeforeClass
     public void beforeClass() {
-        CLPlatform platform = CLPlatform.getDefault();
+        CLPlatform platform = CLPlatform.listCLPlatforms()[CL_PLATFORM_IDX];
         System.out.println(platform);
         device = platform.getMaxFlopsDevice(CLDevice.Type.GPU);
         System.out.println(device);
+        if (device.isDoubleFPAvailable()) {
+            D = 1e-8f;
+        } else {
+            D = 1e-4f;
+        }
     }
 
     @BeforeMethod
@@ -46,43 +51,46 @@ public class TestOpenCLComplexArithmetic {
         context.release();
     }
 
-    private String readCLTestFile(String name) throws IOException {
-        StringBuilder prefix = new StringBuilder();
+    private Complex[][] runProgram(String filename,
+                                   int inElementCount, int outElementCount, long workSize)
+            throws Exception {
+        StringBuilder prefixSrc = new StringBuilder();
         try (BufferedReader is = new BufferedReader(
                 new FileReader("./src/main/resources/complex.cl"))) {
-            is.lines().forEach(s -> prefix.append(s).append("\n"));
+            is.lines().forEach(s -> prefixSrc.append(s).append("\n"));
         }
-        StringBuilder kernel = new StringBuilder();
+        StringBuilder kernelSrc = new StringBuilder();
         try (BufferedReader is = new BufferedReader(
-                new FileReader("./src/test/resources/" + name))) {
-            is.lines().forEach(s -> kernel.append(s).append("\n"));
+                new FileReader("./src/test/resources/" + filename))) {
+            is.lines().forEach(s -> kernelSrc.append(s).append("\n"));
         }
-        return prefix.toString() + "\n" + kernel.toString();
-    }
+        String source = prefixSrc.toString() + "\n" + kernelSrc.toString();
 
-    private CLBuffer<DoubleBuffer> makeRandomlyFilledDoubleComplexBuffer(int elementCount) {
-        DoubleBuffer fb = ByteBuffer.allocateDirect(2 * elementCount * 8)
-                .order(device.isLittleEndian() ? ByteOrder.LITTLE_ENDIAN : ByteOrder.BIG_ENDIAN)
-                .asDoubleBuffer();
-        Random random = new Random();
-        for (int i = 0; i < 2 * elementCount; i++) {
-            fb.put(random.nextDouble()*10 - 5);
-        }
-        fb.flip();
-        return context.createBuffer(fb, CLMemory.Mem.READ_ONLY, CLMemory.Mem.COPY_BUFFER);
-    }
+        int typeSize = device.isDoubleFPAvailable() ? 8 : 4;
+        Class bufferType = device.isDoubleFPAvailable() ? DoubleBuffer.class : FloatBuffer.class;
 
-    private Complex[][] runProgram(String filename, int inElementCount, int outElementCount, long workSize)
-            throws Exception {
-        CLProgram program = context.createProgram(readCLTestFile(filename)).build();
-        // System.out.println(program.getSource());
+        CLProgram program = context.createProgram(source).build();
         if (program.getBuildStatus(device).equals(CLProgram.Status.BUILD_ERROR)) {
             throw new Exception("build error");
         }
         CLKernel kernel = program.createCLKernel("f");
 
-        CLBuffer<DoubleBuffer> in = makeRandomlyFilledDoubleComplexBuffer(inElementCount);
-        CLBuffer<DoubleBuffer> out = context.createDoubleBuffer(2 * outElementCount);
+        ByteBuffer fbByte = ByteBuffer.allocateDirect(2 * inElementCount * typeSize)
+                .order(device.isLittleEndian() ? ByteOrder.LITTLE_ENDIAN : ByteOrder.BIG_ENDIAN);
+        Random random = new Random();
+        for (int i = 0; i < 2 * inElementCount; i++) {
+            if (device.isDoubleFPAvailable()) {
+                fbByte.putDouble(random.nextDouble() * 10 - 5);
+            } else {
+                fbByte.putFloat(random.nextFloat() * 10 - 5);
+            }
+        }
+        fbByte.flip();
+
+        CLBuffer<ByteBuffer> in = context.createBuffer(fbByte, CLMemory.Mem.READ_ONLY, CLMemory.Mem.COPY_BUFFER);
+        CLBuffer<ByteBuffer> out = device.isDoubleFPAvailable() ?
+                context.createByteBuffer(2 * outElementCount * typeSize) :
+                context.createByteBuffer( 2 * outElementCount * typeSize);
 
         kernel.setArg(0, in);
         kernel.setArg(1, out);
@@ -92,15 +100,22 @@ public class TestOpenCLComplexArithmetic {
                 .putReadBuffer(out, true);
 
         Complex[] src = new Complex[inElementCount];
-        DoubleBuffer inB = in.getBuffer();
         for (int i = 0; i < inElementCount; i++) {
-            src[i] = new Complex(inB.get(), inB.get());
+            if (device.isDoubleFPAvailable()) {
+                src[i] = new Complex(fbByte.getDouble(), fbByte.getDouble());
+            } else {
+                src[i] = new Complex(fbByte.getFloat(), fbByte.getFloat());
+            }
         }
 
         Complex[] outC = new Complex[outElementCount];
-        DoubleBuffer outB = out.getBuffer();
+        ByteBuffer outB = out.getBuffer();
         for (int i = 0; i < outElementCount; i++) {
-            outC[i] = new Complex(outB.get(), outB.get());
+            if (device.isDoubleFPAvailable()) {
+                outC[i] = new Complex(outB.getDouble(), outB.getDouble());
+            } else {
+                outC[i] = new Complex(outB.getFloat(), outB.getFloat());
+            }
         }
 
         Complex[][] result = new Complex[2][];

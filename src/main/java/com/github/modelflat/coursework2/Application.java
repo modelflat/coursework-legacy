@@ -47,7 +47,6 @@ public class Application {
         );
         //
 
-
         imageCL = context.createFromGLTexture2d(
                 imagePixels, GL4.GL_TEXTURE_2D, imageGL, 0, CLMemory.Mem.READ_WRITE);
     }

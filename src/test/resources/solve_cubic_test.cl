@@ -10,7 +10,13 @@ kernel void f(global real* points, global real* result) {
 //    printf("c : %.16v2f\n", c);
     real2 roots[3];
 
-    if (solve_cubic( a, b, c, 1e-6, -1, &roots ) != 0) {
+    #ifdef cl_khr_fp64
+        const real precision = 1e-8;
+    #else
+        const real precision = 1e-6f;
+    #endif
+
+    if (solve_cubic( a, b, c, precision, -1, &roots ) != 0) {
         printf("[OPENCL] solution error for id %d!\n", get_global_id(0));
     }
 

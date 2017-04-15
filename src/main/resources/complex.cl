@@ -1,13 +1,23 @@
-#define real  double
-#define real2 double2
-#define PI M_PI
+// double support
+#ifdef cl_khr_fp64
+    #define real  double
+    #define real2 double2
+    #define PI M_PI
+    #define COMPL_ONE_2nd_ROOT_REAL -0.5
+    #define COMPL_ONE_2nd_ROOT_IMAG 0.866025403784438596
+    #define COMPL_ONE_3rd_ROOT_REAL COMPL_ONE_2nd_ROOT_REAL
+    #define COMPL_ONE_3rd_ROOT_IMAG -COMPL_ONE_2nd_ROOT_IMAG
+#else
+    #define real  float
+    #define real2 float2
+    #define PI M_PI_F
+    #define COMPL_ONE_2nd_ROOT_REAL -0.5f
+    #define COMPL_ONE_2nd_ROOT_IMAG 0.866025403f
+    #define COMPL_ONE_3rd_ROOT_REAL COMPL_ONE_2nd_ROOT_REAL
+    #define COMPL_ONE_3rd_ROOT_IMAG -COMPL_ONE_2nd_ROOT_IMAG
+#endif
 
-#define COMPL_ONE_2nd_ROOT_REAL -0.5
-#define COMPL_ONE_2nd_ROOT_IMAG 0.8660254037844385965883020
-#define COMPL_ONE_3rd_ROOT_REAL COMPL_ONE_2nd_ROOT_REAL
-#define COMPL_ONE_3rd_ROOT_IMAG -COMPL_ONE_2nd_ROOT_IMAG
-
-// const real COMPL_ONE_3rd_ROOT_IMAG = sin(PI / 3);
+// const real COMPL_ONE_2nd_ROOT_IMAG = sin(PI / 3);
 
 real2 cdiv(real2 a, real2 b) {
     real sq = b.x*b.x + b.y*b.y;
@@ -63,7 +73,6 @@ int solve_cubic(real2 a, real2 b, real2 c, real precision, int root, real2* root
         -q.x / 2 - first_root_of_D.x,
         -q.y / 2 - first_root_of_D.y
     };
-//    printf("base alpha: %.16v2f\n", base_alpha);
     real2 alpha[3];
     ccbrt(base_alpha, &alpha);
     real2 base_beta = {
@@ -76,7 +85,6 @@ int solve_cubic(real2 a, real2 b, real2 c, real precision, int root, real2* root
     // alpha[0]*beta[i] = -p / 3;
     int idx = -1;
     for (int i = 0; i < 3; ++i) {
-//        printf("alpha %d: %.16v2f\n", i, alpha[i]);
         if (fabs( alpha[0].x*beta[i].x - alpha[0].y*beta[i].y + p.x / 3 ) < precision &&
             fabs( alpha[0].y*beta[i].x + alpha[0].x*beta[i].y + p.y / 3 ) < precision) {
             idx = i;
