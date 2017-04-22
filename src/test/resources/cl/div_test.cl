@@ -1,3 +1,5 @@
+#include "complex.clh"
+
 kernel void f(global real* points, global real* result) {
     int id = get_global_id(0) * 4;
     int out_id = get_global_id(0) * 2;

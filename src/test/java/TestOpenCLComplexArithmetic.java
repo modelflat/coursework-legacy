@@ -1,11 +1,8 @@
 import com.jogamp.opencl.*;
 import org.apache.commons.math3.complex.Complex;
 import org.testng.annotations.*;
-import org.testng.internal.collections.Pair;
 
-import java.io.*;
 import java.nio.*;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
@@ -54,22 +51,12 @@ public class TestOpenCLComplexArithmetic {
     private Complex[][] runProgram(String filename,
                                    int inElementCount, int outElementCount, long workSize)
             throws Exception {
-        StringBuilder prefixSrc = new StringBuilder();
-        try (BufferedReader is = new BufferedReader(
-                new FileReader("./src/main/resources/complex.cl"))) {
-            is.lines().forEach(s -> prefixSrc.append(s).append("\n"));
-        }
-        StringBuilder kernelSrc = new StringBuilder();
-        try (BufferedReader is = new BufferedReader(
-                new FileReader("./src/test/resources/" + filename))) {
-            is.lines().forEach(s -> kernelSrc.append(s).append("\n"));
-        }
-        String source = prefixSrc.toString() + "\n" + kernelSrc.toString();
+
+        String source = Util.readFilesAndConcat("./src/test/resources/cl/" + filename);
 
         int typeSize = device.isDoubleFPAvailable() ? 8 : 4;
-        Class bufferType = device.isDoubleFPAvailable() ? DoubleBuffer.class : FloatBuffer.class;
 
-        CLProgram program = context.createProgram(source).build();
+        CLProgram program = context.createProgram(source).build("-I ./src/main/resources/cl/include");
         if (program.getBuildStatus(device).equals(CLProgram.Status.BUILD_ERROR)) {
             throw new Exception("build error");
         }

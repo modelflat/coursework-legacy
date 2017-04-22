@@ -1,3 +1,5 @@
+#include "complex.clh"
+
 kernel void f(global real* points, global real* result) {
     int id = get_global_id(0) * 6;
     int out_id = get_global_id(0) * 6;
@@ -5,9 +7,6 @@ kernel void f(global real* points, global real* result) {
     real2 a = {points[id], points[id + 1]};
     real2 b = {points[id + 2], points[id + 3]};
     real2 c = {points[id + 4], points[id + 5]};
-//    printf("a : %.16v2f\n", a);
-//    printf("b : %.16v2f\n", b);
-//    printf("c : %.16v2f\n", c);
     real2 roots[3];
 
     #ifdef cl_khr_fp64
