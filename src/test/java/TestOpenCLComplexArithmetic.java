@@ -19,7 +19,7 @@ public class TestOpenCLComplexArithmetic {
     private CLCommandQueue queue;
     private CLDevice device;
 
-    private static final int CL_PLATFORM_IDX = 1;
+    private static final int CL_PLATFORM_IDX = 0;
 
     private static float D;
     private static final int DATA_SIZE = 1024;
