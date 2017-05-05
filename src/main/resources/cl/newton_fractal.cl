@@ -15,6 +15,7 @@ kernel void newton_fractal(
     float t,
     uint runs_count,
     uint points_count,
+    uint iter_skip,
     ulong seed,
     write_only image2d_t out_image)
 {
@@ -36,16 +37,15 @@ kernel void newton_fractal(
     // for each run
     real2 roots[3];
     real2 a;
-    const real2 b = {0, 0};
     const real2 c = C * (-t) / (3 - t);
     const real a_modifier = (-3) / (3 - t);
     for (int run = 0; run < runs_count; ++run) {
         // choose starting point
         real2 starting_point = {
-            random(&rng_state) * span_x / 4. + min_x,
-            random(&rng_state) * span_y / 4. + min_y
+            (random(&rng_state)) * span_x + min_x,
+            (random(&rng_state)) * span_y + min_y
         };
-
+        uint is = iter_skip;
         int frozen = 0;
         // iterate through solutions of cubic equation
         for (int i = 0; i < points_count; ++i) {
@@ -55,19 +55,24 @@ kernel void newton_fractal(
             solve_cubic_newton_fractal_optimized(a, c, 1e-8, root_number, &roots);
             starting_point = roots[root_number];
 
-            // transform coords:
-            coord.x = (starting_point.x - min_x) / scale_x;
-            coord.y = image_height - 1 - (int)((starting_point.y - min_y) / scale_y);
+            // the first iter_skip points will  be skipped
+            if (is == 0) {
+                // transform coords:
+                coord.x = (starting_point.x - min_x) / scale_x;
+                coord.y = image_height - 1 - (int)((starting_point.y - min_y) / scale_y);
 
-            // draw next point:
-            if (coord.x < image_width && coord.y < image_height && coord.x >= 0 && coord.y >= 0) {
-                write_imagef(out_image, coord, color);
-                frozen = 0;
-            } else {
-                if (++frozen > 15) {
-                    printf("[OCL] error at slave %d: frozen!\n", get_global_id(0));
-                    break;
+                // draw next point:
+                if (coord.x < image_width && coord.y < image_height && coord.x >= 0 && coord.y >= 0) {
+                    write_imagef(out_image, coord, color);
+                    frozen = 0;
+                } else {
+                    if (++frozen > 15) {
+                        printf("[OCL] error at slave %d: frozen!\n", get_global_id(0));
+                        break;
+                    }
                 }
+            } else {
+                --is;
             }
         }
     }

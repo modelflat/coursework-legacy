@@ -1,22 +1,19 @@
-package com.github.modelflat.coursework2.gl;
+package com.github.modelflat.coursework2.core;
 
 import com.jogamp.opencl.CLDevice;
 import com.jogamp.opencl.CLPlatform;
 import com.jogamp.opengl.GL3;
 import com.jogamp.opengl.GL4;
-import com.jogamp.opengl.GLException;
 import com.jogamp.opengl.util.GLBuffers;
 import com.jogamp.opengl.util.texture.Texture;
 import com.jogamp.opengl.util.texture.TextureData;
 import com.jogamp.opengl.util.texture.TextureIO;
 
-import java.io.*;
-import java.net.MalformedURLException;
-import java.nio.ByteBuffer;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Created on 27.04.2017.
@@ -83,13 +80,17 @@ public class Util {
                                                     String[] fragmentShader) {
         int prog = gl.glCreateProgram();
 
-        int vert = createShader(gl, GL4.GL_VERTEX_SHADER, vertexShader);
-        gl.glAttachShader(prog, vert);
-        gl.glDeleteShader(vert);
+        if (vertexShader != null) {
+            int vert = createShader(gl, GL4.GL_VERTEX_SHADER, vertexShader);
+            gl.glAttachShader(prog, vert);
+            gl.glDeleteShader(vert);
+        }
 
-        int frag = createShader(gl, GL4.GL_FRAGMENT_SHADER, fragmentShader);
-        gl.glAttachShader(prog, frag);
-        gl.glDeleteShader(frag);
+        if (fragmentShader != null) {
+            int frag = createShader(gl, GL4.GL_FRAGMENT_SHADER, fragmentShader);
+            gl.glAttachShader(prog, frag);
+            gl.glDeleteShader(frag);
+        }
 
         gl.glLinkProgram(prog);
         return prog;
@@ -97,7 +98,9 @@ public class Util {
 
     public static <T extends GL3> int createProgram(T gl,
                                                     String vertexShader, String fragmentShader) {
-        return createProgram(gl, new String[] {vertexShader}, new String[] {fragmentShader});
+        return createProgram(gl,
+                vertexShader == null ? null : new String[]{vertexShader},
+                fragmentShader == null ? null : new String[]{fragmentShader});
     }
 
     public static CLDevice findGLCompatibleDevice(CLPlatform platform) {

@@ -1,7 +1,6 @@
 package com.github.modelflat.coursework2.window;
 
-import com.jogamp.opengl.awt.GLCanvas;
-import com.jogamp.opengl.util.Animator;
+import com.github.modelflat.coursework2.core.MyGLCanvasWrapper;
 
 import java.awt.*;
 import java.awt.event.WindowEvent;
@@ -12,17 +11,13 @@ import java.awt.event.WindowListener;
  */
 public class MainWindowEventHandler implements WindowListener {
 
-    private final Animator animator;
     private Frame mainWindow;
-    private GLCanvas canvas;
+    private MyGLCanvasWrapper wrapper;
 
-    public MainWindowEventHandler(Frame mainWindow, GLCanvas canvas) {
+    public MainWindowEventHandler(Frame mainWindow, MyGLCanvasWrapper wrapper) {
         this.mainWindow = mainWindow;
-        this.canvas = canvas;
-
-        animator = new Animator();
-        animator.add(canvas);
-        animator.start();
+        this.wrapper = wrapper;
+        wrapper.getAnimator().start();
     }
 
     @Override
@@ -33,9 +28,8 @@ public class MainWindowEventHandler implements WindowListener {
     @Override
     public void windowClosing(WindowEvent e) {
         System.out.println("window closing...");
-        //
         mainWindow.dispose();
-        animator.stop();
+        wrapper.getAnimator().stop();
     }
 
     @Override

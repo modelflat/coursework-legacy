@@ -1,7 +1,6 @@
-package com.github.modelflat.coursework2;
+package com.github.modelflat.coursework2.core;
 
 import com.jogamp.opencl.*;
-import com.jogamp.opencl.gl.CLGLContext;
 import com.jogamp.opencl.gl.CLGLImage2d;
 import com.jogamp.opengl.util.GLBuffers;
 
@@ -18,6 +17,7 @@ public class NewtonKernelWrapper {
     private CLKernel kernel;
     private CLContext context;
     private Random rng = new Random();
+    private int workItems;
 
     public NewtonKernelWrapper(CLContext context, CLKernel kernel) {
         this.context = context;
@@ -44,17 +44,19 @@ public class NewtonKernelWrapper {
         kernel.setArg(5, t);
     }
 
-    public void setRunParams(int runCount, int iterCount) {
+    public void setRunParams(int workItems, int runCount, int iterCount, int skipCount) {
+        this.workItems = workItems;
         kernel.setArg(6, runCount);
         kernel.setArg(7, iterCount);
+        kernel.setArg(8, skipCount);
     }
 
     public void setImage(CLGLImage2d image) {
-        kernel.setArg(9, image);
+        kernel.setArg(10, image);
     }
 
-    public CLCommandQueue runOn(CLCommandQueue queue, int workItems) {
-        kernel.setArg(8, rng.nextLong());
+    public CLCommandQueue runOn(CLCommandQueue queue) {
+        kernel.setArg(9, rng.nextLong());
         return queue.put1DRangeKernel(kernel, 0, workItems, 0);
     }
 }
