@@ -1,6 +1,12 @@
 #include "complex.clh"
 #include "random.clh"
 
+#ifdef cl_khr_fp64
+    #define PRECISION 1e-8
+#else
+    #define PRECISION 1e-4
+#endif
+
 // Draws newton fractal
 // seed - seed value for pRNG; see "random.clh"
 kernel void newton_fractal(
@@ -33,18 +39,11 @@ kernel void newton_fractal(
     const real2 b = {0, 0};
     const real2 c = C * (-t) / (3 - t);
     const real a_modifier = (-3) / (3 - t);
-//////////////////////
-        if (get_global_id(0) == 0) {
-            printf("[OCL INFO] bounds = (%f,%f,%f,%f); c = (%.2v2f); t = %f; runs = %dx%d; img_size = %dx%d\n",
-                min_x, max_x, min_y, max_y, C, t, runs_count, points_count, image_width, image_height
-            );
-        }
-/////////////////////
     for (int run = 0; run < runs_count; ++run) {
         // choose starting point
         real2 starting_point = {
-            random(&rng_state) * span_x + min_x,
-            random(&rng_state) * span_y + min_y
+            random(&rng_state) * span_x / 4. + min_x,
+            random(&rng_state) * span_y / 4. + min_y
         };
 
         int frozen = 0;
@@ -53,7 +52,7 @@ kernel void newton_fractal(
             // compute next point:
             a = starting_point * a_modifier;
             uint root_number = as_uint(random(&rng_state)) % 3;
-            solve_cubic(a, b, c, 1e-5, root_number, &roots);
+            solve_cubic_newton_fractal_optimized(a, c, 1e-8, root_number, &roots);
             starting_point = roots[root_number];
 
             // transform coords:

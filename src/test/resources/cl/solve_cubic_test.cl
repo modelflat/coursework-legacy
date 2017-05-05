@@ -16,7 +16,7 @@ kernel void f(global real* points, global real* result) {
     #endif
 
     if (solve_cubic( a, b, c, precision, -1, &roots ) != 0) {
-        printf("[OPENCL] solution error for id %d!\n", get_global_id(0));
+        printf("[OPENCL solve_cubic] solution error for id %d!\n", get_global_id(0));
     }
 
     result[out_id  ] = roots[0].x;

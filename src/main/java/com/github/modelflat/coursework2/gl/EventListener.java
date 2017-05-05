@@ -6,17 +6,15 @@ import com.jogamp.opencl.gl.CLGLContext;
 import com.jogamp.opencl.gl.CLGLImage2d;
 import com.jogamp.opengl.GL4;
 import com.jogamp.opengl.GLAutoDrawable;
+import com.jogamp.opengl.GLContext;
 import com.jogamp.opengl.GLEventListener;
 import com.jogamp.opengl.util.GLBuffers;
 import com.jogamp.opengl.util.texture.Texture;
 
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
-import java.util.Random;
 
 /**
  * Created on 18.03.2017.
@@ -112,15 +110,16 @@ public class EventListener implements GLEventListener {
         gl.glClearColor(0.2f, 0.0f, 0.0f, 1.0f);
     }
 
-    private void initCLSide(GLAutoDrawable drawable) {
-        CLPlatform chosenPlatform = CLPlatform.listCLPlatforms()[0];
+    private void initCLSide(GLContext context) {
+        CLPlatform chosenPlatform = CLPlatform.getDefault();
         System.out.println(chosenPlatform);
         CLDevice chosenDevice = Util.findGLCompatibleDevice(chosenPlatform);
         if (chosenDevice == null) {
             throw new RuntimeException(String.format("no device supporting GL sharing on platform %s!",
                     chosenPlatform.toString()));
         }
-        clContext = CLGLContext.create(drawable.getContext(), chosenDevice);
+
+        clContext = CLGLContext.create(context, chosenDevice);
         queue = chosenDevice.createCommandQueue();
 
         try (InputStream is = new FileInputStream("./src/main/resources/cl/newton_fractal.cl")) {
@@ -142,7 +141,9 @@ public class EventListener implements GLEventListener {
     @Override
     public void init(GLAutoDrawable drawable) {
         // perform CL initialization
-        initCLSide(drawable);
+        GLContext context = drawable.getContext();
+
+        initCLSide(context);
 
         // perform GL initialization
         GL4 gl = drawable.getGL().getGL4();
@@ -156,14 +157,14 @@ public class EventListener implements GLEventListener {
                 0, CLMemory.Mem.WRITE_ONLY);
 
         // kernel
-        newtonKernelWrapper.setBounds(-.5f, .5f, -.5f, .5f);
-        newtonKernelWrapper.setC(-.5f, .5f);
+        newtonKernelWrapper.setBounds(-1.f, 1.f, -1.f, 1.f);
+        newtonKernelWrapper.setC(.5f, -.5f);
         /*CLBuffer<FloatBuffer> cConstBuffer = clContext.createBuffer(
                 GLBuffers.newDirectFloatBuffer(new float[] {-.5f, .5f}),
                 CLMemory.Mem.READ_ONLY, CLMemory.Mem.COPY_BUFFER);
         kernel.setArg(4, cConstBuffer);*/
         newtonKernelWrapper.setT(1.0f);
-        newtonKernelWrapper.setRunParams(10, 10);
+        newtonKernelWrapper.setRunParams(1, 200);
         newtonKernelWrapper.setImage(imageCL);
 
         clearKernel.setArg(0, imageCL);
@@ -191,7 +192,7 @@ public class EventListener implements GLEventListener {
                         imageWidth, imageHeight,
                         0, 0); // TODO replace with GL functionality of that kind
         newtonKernelWrapper
-                .runOn(queue, 1000)
+                .runOn(queue, 100)
                 .finish()
                 .putReleaseGLObject(imageCL);
 

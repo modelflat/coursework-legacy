@@ -1,13 +1,17 @@
 import com.jogamp.opencl.*;
 import org.apache.commons.math3.complex.Complex;
-import org.testng.annotations.*;
+import org.testng.annotations.AfterMethod;
+import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.Test;
 
-import java.nio.*;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
 import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertNotEquals;
 
 /**
  * Created on 13.04.2017.
@@ -19,10 +23,10 @@ public class TestOpenCLComplexArithmetic {
     private CLCommandQueue queue;
     private CLDevice device;
 
-    private static final int CL_PLATFORM_IDX = 0;
+    private static final int CL_PLATFORM_IDX = 1;
 
     private static float D;
-    private static final int DATA_SIZE = 1024;
+    private static final int DATA_SIZE = 10000;
 
     @BeforeClass
     public void beforeClass() {
@@ -33,7 +37,7 @@ public class TestOpenCLComplexArithmetic {
         if (device.isDoubleFPAvailable()) {
             D = 1e-8f;
         } else {
-            D = 1e-4f;
+            D = 1e-5f;
         }
     }
 
@@ -48,7 +52,7 @@ public class TestOpenCLComplexArithmetic {
         context.release();
     }
 
-    private Complex[][] runProgram(String filename,
+    private Complex[][] runProgram(String filename, ByteBuffer buffer,
                                    int inElementCount, int outElementCount, long workSize)
             throws Exception {
 
@@ -62,19 +66,7 @@ public class TestOpenCLComplexArithmetic {
         }
         CLKernel kernel = program.createCLKernel("f");
 
-        ByteBuffer fbByte = ByteBuffer.allocateDirect(2 * inElementCount * typeSize)
-                .order(device.isLittleEndian() ? ByteOrder.LITTLE_ENDIAN : ByteOrder.BIG_ENDIAN);
-        Random random = new Random();
-        for (int i = 0; i < 2 * inElementCount; i++) {
-            if (device.isDoubleFPAvailable()) {
-                fbByte.putDouble(random.nextDouble() * 10 - 5);
-            } else {
-                fbByte.putFloat(random.nextFloat() * 10 - 5);
-            }
-        }
-        fbByte.flip();
-
-        CLBuffer<ByteBuffer> in = context.createBuffer(fbByte, CLMemory.Mem.READ_ONLY, CLMemory.Mem.COPY_BUFFER);
+        CLBuffer<ByteBuffer> in = context.createBuffer(buffer, CLMemory.Mem.READ_ONLY, CLMemory.Mem.COPY_BUFFER);
         CLBuffer<ByteBuffer> out = device.isDoubleFPAvailable() ?
                 context.createByteBuffer(2 * outElementCount * typeSize) :
                 context.createByteBuffer( 2 * outElementCount * typeSize);
@@ -89,9 +81,9 @@ public class TestOpenCLComplexArithmetic {
         Complex[] src = new Complex[inElementCount];
         for (int i = 0; i < inElementCount; i++) {
             if (device.isDoubleFPAvailable()) {
-                src[i] = new Complex(fbByte.getDouble(), fbByte.getDouble());
+                src[i] = new Complex(buffer.getDouble(), buffer.getDouble());
             } else {
-                src[i] = new Complex(fbByte.getFloat(), fbByte.getFloat());
+                src[i] = new Complex(buffer.getFloat(), buffer.getFloat());
             }
         }
 
@@ -110,6 +102,31 @@ public class TestOpenCLComplexArithmetic {
         result[1] = outC;
 
         return result;
+    }
+
+    private Complex[][] runProgram(String filename,
+                                   int inElementCount, int outElementCount, long workSize)
+            throws Exception {
+        ByteBuffer buffer = allocateBuffer(inElementCount);
+        Random random = new Random();
+        for (int i = 0; i < 2 * inElementCount; i++) {
+            if (device.isDoubleFPAvailable()) {
+                buffer.putDouble(random.nextDouble() * 10 - 5);
+            } else {
+                buffer.putFloat(random.nextFloat() * 10 - 5);
+            }
+        }
+        buffer.flip();
+        return runProgram(filename, buffer, inElementCount, outElementCount, workSize);
+    }
+
+    private ByteBuffer allocateBuffer(int inElementCount) {
+        return ByteBuffer.allocateDirect(2 * inElementCount * (device.isDoubleFPAvailable() ? 8 : 4))
+                .order(device.isLittleEndian() ? ByteOrder.LITTLE_ENDIAN : ByteOrder.BIG_ENDIAN);
+    }
+
+    private void assertComplexEquals(Complex a, Complex b) throws Exception {
+        assertEquals(Complex.equals(a, b, D), true, a + " vs " + b);
     }
 
     @Test
@@ -187,16 +204,103 @@ public class TestOpenCLComplexArithmetic {
         );
 
         Complex[] roots = new Complex[3];
+        int h = 0;
         for (int i = 0; i < DATA_SIZE; i++) {
             new ComplexCubicEquation(Complex.ONE,
                     result[0][3*i], result[0][3*i + 1], result[0][3*i + 2]
             ).solve(roots);
-            assertEquals(Complex.equals(roots[0], result[1][3*i], D), true,
-                    roots[0] + " vs " + result[1][3*i]);
-            assertEquals(Complex.equals(roots[1], result[1][3*i + 1], D), true,
-                    roots[1] + " vs " + result[1][3*i + 1]);
-            assertEquals(Complex.equals(roots[2], result[1][3*i + 2], D), true,
-                    roots[2] + " vs " + result[1][3*i + 2]);
+            String forInput = String.format(" ||| for input: z^3 + %s*z^2 + %s*z + %s = 0",
+                    result[0][3 * i],
+                    result[0][3 * i + 1],
+                    result[0][3 * i + 2]);
+//            assertEquals(Complex.equals(roots[0], result[1][3*i], D), true,
+//                    roots[0] + " vs " + result[1][3*i] + forInput);
+//            assertEquals(Complex.equals(roots[1], result[1][3*i + 1], D), true,
+//                    roots[1] + " vs " + result[1][3*i + 1] + forInput);
+//            assertEquals(Complex.equals(roots[2], result[1][3*i + 2], D), true,
+//                    roots[2] + " vs " + result[1][3*i + 2] + forInput);
+            boolean passed = Complex.equals(roots[0], result[1][3 * i], D)
+                    && Complex.equals(roots[1], result[1][3 * i + 1], D)
+                    && Complex.equals(roots[2], result[1][3 * i + 2], D);
+            if (!passed) {
+                ++h;
+            }
+        }
+        assertEquals(h, 0, String.format("%d/%d", h, DATA_SIZE));
+    }
+
+    @Test(dataProviderClass = TestData.class, dataProvider = "data")
+    public void solveCubicOptimized(Complex[] input) throws Exception {
+        Complex[][] result;
+        int dsize;
+        if (input != null) {
+            int DATA_SIZE = input.length / 2;
+            dsize = DATA_SIZE;
+            ByteBuffer byteBuffer = allocateBuffer(DATA_SIZE * 2);
+            for (Complex c : input) {
+                byteBuffer.putDouble(c.getReal());
+                byteBuffer.putDouble(c.getImaginary());
+            }
+            byteBuffer.flip();
+            result = runProgram(
+                    "solve_cubic_newton_fractal_optimized_test.cl",
+                    byteBuffer,
+                    DATA_SIZE * 2,
+                    DATA_SIZE * 3,
+                    DATA_SIZE
+            );
+        } else {
+            dsize = DATA_SIZE;
+            result = runProgram(
+                    "solve_cubic_newton_fractal_optimized_test.cl",
+                    DATA_SIZE * 2,
+                    DATA_SIZE * 3,
+                    DATA_SIZE
+            );
+        }
+
+        Thread.sleep(500); // wait for ocl output
+
+        Complex[] roots = new Complex[3];
+        for (int i = 0; i < dsize; i++) {
+            ComplexCubicEquation eq = new ComplexCubicEquation(
+                    Complex.ONE,
+                    result[0][2 * i],
+                    Complex.ZERO,
+                    result[0][2 * i + 1]
+            );
+            eq.setPrecision(1e-7);
+            boolean cannotBeSolved = false;
+            try {
+                eq.solve(roots);
+            } catch (ComplexCubicEquation.SolutionException e) {
+                cannotBeSolved = true;
+                System.out.println(eq + " cannot be solved with precision 1e-7!");
+            }
+            boolean passed = cannotBeSolved ||
+                    Complex.equals(roots[0], result[1][3 * i], D)
+                            && Complex.equals(roots[1], result[1][3 * i + 1], D)
+                            && Complex.equals(roots[2], result[1][3 * i + 2], D);
+            if (!passed) {
+                System.out.println(String.format("new Complex%s, new Complex%s,", eq.getA(), eq.getC()));
+                System.out.println("equation: " + eq);
+                System.out.println("solution: " + Arrays.toString(roots));
+                System.out.print("CL solution: " + result[1][3 * i] + " ");
+                System.out.print(result[1][3 * i + 1] + " ");
+                System.out.println(result[1][3 * i + 2]);
+                System.out.println("===== STEPS =====");
+                try {
+                    eq.solve(roots, true);
+                } catch (ComplexCubicEquation.SolutionException e) {
+                    System.out.println("... and then a SolutionException occured :(");
+                }
+                System.out.println("=================");
+            }
+            if (!cannotBeSolved) {
+                assertComplexEquals(roots[0], result[1][3 * i]);
+                assertComplexEquals(roots[1], result[1][3 * i + 1]);
+                assertComplexEquals(roots[2], result[1][3 * i + 2]);
+            }
         }
     }
 

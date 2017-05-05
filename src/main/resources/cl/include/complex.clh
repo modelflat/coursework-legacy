@@ -13,7 +13,7 @@
         #define real2 float2
         #define PI M_PI_F
         #define COMPL_ONE_2nd_ROOT_REAL -0.5f
-        #define COMPL_ONE_2nd_ROOT_IMAG 0.866025403f
+        #define COMPL_ONE_2nd_ROOT_IMAG 0.86603f
     #endif
 
     #define COMPL_ONE_3rd_ROOT_REAL COMPL_ONE_2nd_ROOT_REAL
@@ -87,6 +87,8 @@
         // alpha[0]*beta[i] = -p / 3;
         int idx = -1;
         for (int i = 0; i < 3; ++i) {
+            //printf("%d: %.5v2f\n", i, alpha[i]);
+            //printf("%d: %.5v2f\n", i, beta[i]);
             if (fabs( alpha[0].x*beta[i].x - alpha[0].y*beta[i].y + p.x / 3 ) < precision &&
                 fabs( alpha[0].y*beta[i].x + alpha[0].x*beta[i].y + p.y / 3 ) < precision) {
                 idx = i;
@@ -115,6 +117,86 @@
             roots[2].x = alpha[2].x - a.x / 3 +
                 COMPL_ONE_2nd_ROOT_REAL*beta[idx].x - COMPL_ONE_2nd_ROOT_IMAG*beta[idx].y;
             roots[2].y = alpha[2].y - a.y / 3 +
+                COMPL_ONE_2nd_ROOT_REAL*beta[idx].y + COMPL_ONE_2nd_ROOT_IMAG*beta[idx].x;
+        }
+        return 0;
+    }
+
+    // Here:
+    // a = a * (-3) / (3 - t);
+    // b = 0, 0
+    // c = C * (-t) / (3 - t);
+    // z**3 + a*z**2 + c = 0
+    // NOTE: value -1 for root is not supported!!!
+    int solve_cubic_newton_fractal_optimized(real2 a, real2 c, real precision, int root, real2* roots) {
+        real ax = a.x;
+        real ax2 = ax * ax;
+        real ay = a.y;
+        real ay2 = ay * ay;
+        real cx = c.x;
+        real cy = c.y;
+
+        real2 D = {
+            (cx*cx - cy*cy) / 4.0f + (cx*ax*(ax2 - 3*ay2) - cy*ay*(3*ax2 - ay2)) / 27.0f,
+            cx*cy / 2.0f + (cx*ay*(3*ax2 - ay2) + cy*ax*(ax2 - 3*ay2)) / 27.0f
+        };
+        real modulus = length(D);
+        real2 first_root_of_D = {
+            sqrt((modulus + D.x) / 2.0f),
+            sign(D.y) * sqrt((modulus - D.x) / 2.0f)
+        };
+
+        real2 base_alpha = {
+            ax * (3*ay2 - ax2),
+            ay * (ay2 - 3*ax2)
+        };
+
+        base_alpha /= 27.0f;
+        base_alpha -= c / 2.0f;
+
+        real2 base_beta = base_alpha;
+        base_alpha -= first_root_of_D;
+        base_beta += first_root_of_D;
+
+        // ====================
+        real2 alpha[3];
+        ccbrt(base_alpha, &alpha);
+        real2 beta[3];
+        ccbrt(base_beta, &beta);
+        // now we have alpha & beta values, lets combine them such as:
+        // alpha[0]*beta[i] = -p / 3;
+        int idx = -1;
+        real2 r;
+        for (int i = 0; i < 3; ++i) {
+            r.x = alpha[0].x * beta[i].x - alpha[0].y * beta[i].y + (ay2 - ax2) / 9.0f;
+            r.y = alpha[0].y * beta[i].x + alpha[0].x * beta[i].y - 2*ax*ay / 9.0f;
+            if (fabs(r.x) < precision && fabs(r.y) < precision) {
+                idx = i;
+                break;
+            }
+        }
+        if (idx == -1) {
+            // cannot find b, such that alpha*beta = p/3 (although it should always exists);
+            // maybe floating point error is greater than precision, but better not to risk and report error
+            return 1;
+        }
+        // now corresponding beta is found for alpha[0]. other betas can be inferred from it
+        if (root == 0) {
+            // alpha_1 + beta_1 - a/3
+            roots[0] = alpha[0] + beta[idx] - a / 3;
+        }
+        if (root == 1) {
+            // alpha_2 + beta_3 - a/3
+            roots[1].x = alpha[1].x - ax / 3 +
+                COMPL_ONE_3rd_ROOT_REAL*beta[idx].x - COMPL_ONE_3rd_ROOT_IMAG*beta[idx].y;
+            roots[1].y = alpha[1].y - ay / 3 +
+                COMPL_ONE_3rd_ROOT_REAL*beta[idx].y + COMPL_ONE_3rd_ROOT_IMAG*beta[idx].x;
+        }
+        if (root == 2) {
+            // alpha_3 + beta_2 - a/3
+            roots[2].x = alpha[2].x - ax / 3 +
+                COMPL_ONE_2nd_ROOT_REAL*beta[idx].x - COMPL_ONE_2nd_ROOT_IMAG*beta[idx].y;
+            roots[2].y = alpha[2].y - ay / 3 +
                 COMPL_ONE_2nd_ROOT_REAL*beta[idx].y + COMPL_ONE_2nd_ROOT_IMAG*beta[idx].x;
         }
         return 0;

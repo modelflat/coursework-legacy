@@ -29,20 +29,32 @@ public class ComplexCubicEquation {
         this.c = d.divide(a);
     }
 
-    public void solve(Complex[] roots) {
+    public void solve(Complex[] roots, boolean trace) {
         // prepare equation for solving, i.e. transform it into x**3 + px + q = 0
         Complex p = b.subtract(a.pow(2).divide(3));
         Complex q = c.add(a.pow(3).multiply(2.0/27.0)).subtract(a.multiply(b).divide(3));
         //
         Complex rootOfD = ((q.pow(2).divide(4)).add(p.pow(3).divide(27.0))).nthRoot(2).get(0);
+        if (trace) {
+            System.out.println("rootOfD" + rootOfD);
+        }
         //
         List<Complex> alpha = (q.negate().divide(2)).subtract(rootOfD).nthRoot(3);
+        if (trace) {
+            System.out.println(alpha);
+        }
         List<Complex> beta = (q.negate().divide(2)).add(rootOfD).nthRoot(3);
+        if (trace) {
+            System.out.println(beta);
+        }
         //
         int bI = 0;
         boolean found = false;
         for (Complex betaIth : beta) {
             Complex r = alpha.get(0).multiply(betaIth).add(p.divide(3));
+            if (trace) {
+                System.out.println(r);
+            }
             if ((preciseZero && r.equals(Complex.ZERO)) ||
                     (Math.abs(r.getReal()) < precision && Math.abs(r.getImaginary()) < precision)) {
                 found = true;
@@ -58,6 +70,10 @@ public class ComplexCubicEquation {
         roots[0] = alpha.get(0).add(beta.get(bI)).subtract(a.divide(3)); // alpha_1 + beta_1 - a/3
         roots[1] = alpha.get(1).add(beta.get(bI).multiply(eps2)).subtract(a.divide(3)); // alpha_2 + beta_3 - a/3
         roots[2] = alpha.get(2).add(beta.get(bI).multiply(eps1)).subtract(a.divide(3)); // alpha_3 + beta_2 - a/3
+    }
+
+    public void solve(Complex[] roots) {
+        solve(roots, false);
     }
 
     public Complex getA() {
@@ -86,5 +102,10 @@ public class ComplexCubicEquation {
 
     public void setPreciseZero(boolean preciseZero) {
         this.preciseZero = preciseZero;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("(1, 0), %s, %s, %s", a, b, c);
     }
 }
