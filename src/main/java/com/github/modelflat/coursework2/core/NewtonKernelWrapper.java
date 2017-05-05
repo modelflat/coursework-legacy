@@ -4,7 +4,7 @@ import com.jogamp.opencl.*;
 import com.jogamp.opencl.gl.CLGLImage2d;
 import com.jogamp.opengl.util.GLBuffers;
 
-import java.nio.FloatBuffer;
+import java.nio.DoubleBuffer;
 import java.util.Random;
 
 /**
@@ -12,8 +12,8 @@ import java.util.Random;
  */
 public class NewtonKernelWrapper {
 
-    private FloatBuffer cBuffer = GLBuffers.newDirectFloatBuffer(2);
-    private CLBuffer<FloatBuffer> cCLBuffer;
+    private DoubleBuffer cBuffer = GLBuffers.newDirectDoubleBuffer(2);
+    private CLBuffer<DoubleBuffer> cCLBuffer;
     private CLKernel kernel;
     private CLContext context;
     private Random rng = new Random();
@@ -24,14 +24,14 @@ public class NewtonKernelWrapper {
         this.kernel = kernel;
     }
 
-    public void setBounds(float minX, float maxX, float minY, float maxY) {
+    public void setBounds(double minX, double maxX, double minY, double maxY) {
         kernel.setArg(0, minX);
         kernel.setArg(1, maxX);
         kernel.setArg(2, minY);
         kernel.setArg(3, maxY);
     }
 
-    public void setC(float real, float imaginary) {
+    public void setC(double real, double imaginary) {
         cBuffer.put(0, real);
         cBuffer.put(1, imaginary);
         if (cCLBuffer == null) {
@@ -40,7 +40,7 @@ public class NewtonKernelWrapper {
         kernel.setArg(4, cCLBuffer);
     }
 
-    public void setT(float t) {
+    public void setT(double t) {
         kernel.setArg(5, t);
     }
 
