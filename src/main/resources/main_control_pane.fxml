@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+<AnchorPane cache="true" cacheHint="SPEED" depthTest="DISABLE" pickOnBounds="false" prefHeight="600.0" prefWidth="400.0"
+            xmlns="http://javafx.com/javafx/8.0.112" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.github.modelflat.coursework2.ui.MainControlPaneController">
+    <VBox layoutX="10.0" layoutY="10.0" prefHeight="504.0" prefWidth="390.0">
+        <VBox cache="true" cacheHint="SPEED" pickOnBounds="false" prefHeight="152.0" prefWidth="390.0">
+            <CheckBox fx:id="doCLClearCheckBox" mnemonicParsing="false" onMouseClicked="#doCLClearCheckBoxClicked"
+                      selected="true" text="Perform CL clear">
+                <VBox.margin>
+                    <Insets bottom="10.0"/>
+                </VBox.margin>
+            </CheckBox>
+            <CheckBox fx:id="doPostClearCheckBox" mnemonicParsing="false" onMouseClicked="#doPostClearCheckBoxClicked"
+                      selected="true" text="Perform statistical clear">
+                <VBox.margin>
+                    <Insets bottom="10.0"/>
+                </VBox.margin>
+            </CheckBox>
+            <CheckBox fx:id="doRecomputeFractalCheckBox" mnemonicParsing="false"
+                      onMouseClicked="#doRecomputeFractalCheckBoxClicked" text="Recompute fractal">
+                <VBox.margin>
+                    <Insets bottom="10.0"/>
+                </VBox.margin>
+            </CheckBox>
+            <opaqueInsets>
+                <Insets bottom="5.0"/>
+            </opaqueInsets>
+        </VBox>
+        <VBox fx:id="metaEvolutionPaneVBox" prefHeight="364.0" prefWidth="390.0">
+            <padding>
+                <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
+            </padding>
+            <CheckBox fx:id="doEvolveCheckBox" mnemonicParsing="false" onMouseClicked="#doEvolveCheckBoxClicked"
+                      selected="true" text="Evolve"/>
+            <VBox fx:id="evolutionPaneVBox" prefHeight="339.0" prefWidth="380.0">
+                <padding>
+                    <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
+                </padding>
+                <!-- T evolution controls -->
+                <HBox alignment="BASELINE_LEFT" prefHeight="20.0" prefWidth="390.0">
+                    <padding>
+                        <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
+                    </padding>
+                    <VBox.margin>
+                        <Insets/>
+                    </VBox.margin>
+                    <opaqueInsets>
+                        <Insets/>
+                    </opaqueInsets>
+                    <CheckBox fx:id="doEvolveTCheckBox" mnemonicParsing="false"
+                              onMouseClicked="#doEvolveTCheckBoxClicked" text="t">
+                        <HBox.margin>
+                            <Insets right="75.0"/>
+                        </HBox.margin>
+                    </CheckBox>
+                    <Button fx:id="tEvolutionCustomizeButton" mnemonicParsing="false"
+                            onMouseClicked="#tEvolutionCustomizeButtonClicked" text="Customize...">
+                        <HBox.margin>
+                            <Insets right="10.0"/>
+                        </HBox.margin>
+                    </Button>
+                    <Label fx:id="tCurrentStateLabel" text="t = ?">
+                        <font>
+                            <Font size="14.0"/>
+                        </font>
+                    </Label>
+                </HBox>
+                <!-- C real -->
+                <HBox alignment="BASELINE_LEFT" prefHeight="20.0" prefWidth="390.0">
+                    <padding>
+                        <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
+                    </padding>
+                    <VBox.margin>
+                        <Insets/>
+                    </VBox.margin>
+                    <opaqueInsets>
+                        <Insets/>
+                    </opaqueInsets>
+                    <CheckBox fx:id="doEvolveCRealCheckBox" mnemonicParsing="false"
+                              onMouseClicked="#doEvolveCRealCheckBoxClicked" text="C Real">
+                        <HBox.margin>
+                            <Insets right="46.0"/>
+                        </HBox.margin>
+                    </CheckBox>
+                    <Button fx:id="cRealEvolutionCustomizeButton" mnemonicParsing="false"
+                            onMouseClicked="#cRealEvolutionCustomizeButtonClicked" text="Customize...">
+                        <HBox.margin>
+                            <Insets right="10.0"/>
+                        </HBox.margin>
+                    </Button>
+                    <Label fx:id="cRealCurrentStateLabel" text="cReal = ?">
+                        <font>
+                            <Font size="14.0"/>
+                        </font>
+                    </Label>
+                </HBox>
+                <!-- C imaginary -->
+                <HBox alignment="BASELINE_LEFT" prefHeight="20.0" prefWidth="390.0">
+                    <padding>
+                        <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
+                    </padding>
+                    <VBox.margin>
+                        <Insets/>
+                    </VBox.margin>
+                    <opaqueInsets>
+                        <Insets/>
+                    </opaqueInsets>
+                    <CheckBox fx:id="doEvolveCImagCheckBox" mnemonicParsing="false"
+                              onMouseClicked="#doEvolveCImagCheckBoxClicked" text="C Imaginary">
+                        <HBox.margin>
+                            <Insets right="16.0"/>
+                        </HBox.margin>
+                    </CheckBox>
+                    <Button fx:id="cImagEvolutionCustomizeButton" mnemonicParsing="false"
+                            onMouseClicked="#cImagEvolutionCustomizeButtonClicked" text="Customize...">
+                        <HBox.margin>
+                            <Insets right="10.0"/>
+                        </HBox.margin>
+                    </Button>
+                    <Label fx:id="cImagCurrentStateLabel" text="cImag = ?">
+                        <font>
+                            <Font size="14.0"/>
+                        </font>
+                    </Label>
+                </HBox>
+                <!-- Bounds evolution -->
+                <VBox prefHeight="216.0" prefWidth="370.0">
+                    <padding>
+                        <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
+                    </padding>
+                    <CheckBox fx:id="doEvolveBoundsCheckBox" mnemonicParsing="false"
+                              onMouseClicked="#doEvolveBoundsCheckBoxClicked" text="Bounds"/>
+                    <VBox fx:id="boundsEvolutionPaneVBox" prefHeight="117.0" prefWidth="360.0">
+                        <HBox alignment="BASELINE_LEFT" prefHeight="20.0" prefWidth="390.0">
+                            <padding>
+                                <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
+                            </padding>
+                            <VBox.margin>
+                                <Insets/>
+                            </VBox.margin>
+                            <opaqueInsets>
+                                <Insets/>
+                            </opaqueInsets>
+                            <CheckBox fx:id="doEvolveXMinCheckBox" mnemonicParsing="false"
+                                      onMouseClicked="#doEvolveXMinCheckBoxClicked" text="X min">
+                                <HBox.margin>
+                                    <Insets right="45.0"/>
+                                </HBox.margin>
+                            </CheckBox>
+                            <Button mnemonicParsing="false" onMouseClicked="#xMinEvolutionCustomizeButtonClicked"
+                                    text="Customize..." fx:id="xMinEvolutionCustomizeButton">
+                                <HBox.margin>
+                                    <Insets right="10.0"/>
+                                </HBox.margin>
+                            </Button>
+                            <Label text="xMin = ?" fx:id="xMinCurrentStateLabel">
+                                <font>
+                                    <Font size="14.0"/>
+                                </font>
+                            </Label>
+                        </HBox>
+                        <HBox alignment="BASELINE_LEFT" prefHeight="20.0" prefWidth="390.0">
+                            <padding>
+                                <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
+                            </padding>
+                            <VBox.margin>
+                                <Insets/>
+                            </VBox.margin>
+                            <opaqueInsets>
+                                <Insets/>
+                            </opaqueInsets>
+                            <CheckBox fx:id="doEvolveXMaxCheckBox" mnemonicParsing="false"
+                                      onMouseClicked="#doEvolveXMaxCheckBoxClicked" text="X max">
+                                <HBox.margin>
+                                    <Insets right="43.0"/>
+                                </HBox.margin>
+                            </CheckBox>
+                            <Button mnemonicParsing="false" onMouseClicked="#xMaxEvolutionCustomizeButtonClicked"
+                                    text="Customize..." fx:id="xMaxEvolutionCustomizeButton">
+                                <HBox.margin>
+                                    <Insets right="10.0"/>
+                                </HBox.margin>
+                            </Button>
+                            <Label text="xMax = ?" fx:id="xMaxCurrentStateLabel">
+                                <font>
+                                    <Font size="14.0"/>
+                                </font>
+                            </Label>
+                        </HBox>
+                        <HBox alignment="BASELINE_LEFT" prefHeight="20.0" prefWidth="390.0">
+                            <padding>
+                                <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
+                            </padding>
+                            <VBox.margin>
+                                <Insets/>
+                            </VBox.margin>
+                            <opaqueInsets>
+                                <Insets/>
+                            </opaqueInsets>
+                            <CheckBox fx:id="doEvolveYMinCheckBox" mnemonicParsing="false"
+                                      onMouseClicked="#doEvolveYMinCheckBoxClicked" text="Y min">
+                                <HBox.margin>
+                                    <Insets right="45.0"/>
+                                </HBox.margin>
+                            </CheckBox>
+                            <Button fx:id="yMinEvolutionCustomizeButton" mnemonicParsing="false"
+                                    onMouseClicked="#yMinEvolutionCustomizeButtonClicked" text="Customize...">
+                                <HBox.margin>
+                                    <Insets right="10.0"/>
+                                </HBox.margin>
+                            </Button>
+                            <Label fx:id="yMinCurrentStateLabel" text="yMin = ?">
+                                <font>
+                                    <Font size="14.0"/>
+                                </font>
+                            </Label>
+                        </HBox>
+                        <HBox alignment="BASELINE_LEFT" prefHeight="20.0" prefWidth="390.0">
+                            <padding>
+                                <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
+                            </padding>
+                            <VBox.margin>
+                                <Insets/>
+                            </VBox.margin>
+                            <opaqueInsets>
+                                <Insets/>
+                            </opaqueInsets>
+                            <CheckBox fx:id="doEvolveYMaxCheckBox" mnemonicParsing="false"
+                                      onMouseClicked="#doEvolveYMaxCheckBoxClicked" text="Y max">
+                                <HBox.margin>
+                                    <Insets right="43.0"/>
+                                </HBox.margin>
+                            </CheckBox>
+                            <Button fx:id="yMaxEvolutionCustomizeButton" mnemonicParsing="false"
+                                    onMouseClicked="#yMaxEvolutionCustomizeButtonClicked" text="Customize...">
+                                <HBox.margin>
+                                    <Insets right="10.0"/>
+                                </HBox.margin>
+                            </Button>
+                            <Label fx:id="yMaxCurrentStateLabel" text="yMax = ?">
+                                <font>
+                                    <Font size="14.0"/>
+                                </font>
+                            </Label>
+                        </HBox>
+                    </VBox>
+                </VBox>
+
+
+            </VBox>
+        </VBox>
+    </VBox>
+    <padding>
+        <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
+    </padding>
+</AnchorPane>

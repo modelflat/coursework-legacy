@@ -1,4 +1,4 @@
-package com.github.modelflat.coursework2.core;
+package com.github.modelflat.coursework2.util;
 
 import com.jogamp.opencl.CLDevice;
 import com.jogamp.opencl.CLPlatform;
@@ -9,7 +9,6 @@ import com.jogamp.opengl.util.texture.Texture;
 import com.jogamp.opengl.util.texture.TextureData;
 import com.jogamp.opengl.util.texture.TextureIO;
 
-import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
@@ -17,7 +16,7 @@ import java.nio.IntBuffer;
 /**
  * Created on 27.04.2017.
  */
-public class Util {
+public class GLUtil {
 
     public static <T extends GL3> int createVBO(T gl, float[] vertexData) {
         int[] result = new int[1];
@@ -43,22 +42,6 @@ public class Util {
         texture.setTexParameteri(gl, GL4.GL_TEXTURE_MAG_FILTER, GL4.GL_LINEAR);
         texture.setTexParameteri(gl, GL4.GL_TEXTURE_WRAP_S, GL4.GL_CLAMP_TO_EDGE);
         texture.setTexParameteri(gl, GL4.GL_TEXTURE_WRAP_T, GL4.GL_CLAMP_TO_EDGE);
-        return texture;
-    }
-
-    public static <T extends GL3> Texture createTexture(T gl, String filename, int imageWidth, int imageHeight)
-            throws IOException {
-        Texture texture;
-        String[] splitted = filename.split("\\.");
-        try (InputStream is = new FileInputStream(filename)) {
-            texture = TextureIO.newTexture(is, false,
-                    "." + splitted[splitted.length - 1].toLowerCase());
-
-            texture.setTexParameteri(gl, GL3.GL_TEXTURE_MIN_FILTER, GL3.GL_LINEAR);
-            texture.setTexParameteri(gl, GL3.GL_TEXTURE_MAG_FILTER, GL3.GL_LINEAR);
-            texture.setTexParameteri(gl, GL3.GL_TEXTURE_WRAP_S, GL3.GL_CLAMP_TO_EDGE);
-            texture.setTexParameteri(gl, GL3.GL_TEXTURE_WRAP_T, GL3.GL_CLAMP_TO_EDGE);
-        }
         return texture;
     }
 
@@ -100,23 +83,12 @@ public class Util {
         return prog;
     }
 
-    public static <T extends GL3> int createProgram(T gl, String vertexShaderFile, String fragmentShaderFile) {
-        StringBuilder vertexShader = new StringBuilder();
-        String basePath = "./src/main/resources/glsl/";
-        try (BufferedReader br = new BufferedReader(new FileReader(basePath + vertexShaderFile))) {
-            br.lines().forEach((line) -> vertexShader.append(line).append('\n'));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        StringBuilder fragmentShader = new StringBuilder();
-        try (BufferedReader br = new BufferedReader(new FileReader(basePath + fragmentShaderFile))) {
-            br.lines().forEach((line) -> fragmentShader.append(line).append('\n'));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        return createProgram(gl, new String[]{vertexShader.toString()}, new String[]{fragmentShader.toString()});
+    public static <T extends GL3> int createProgram(T gl,
+                                                    String vertexShaderFile,
+                                                    String fragmentShaderFile) throws NoSuchResourceException {
+        return createProgram(gl,
+                new String[]{Util.loadSourceFile(vertexShaderFile)},
+                new String[]{Util.loadSourceFile(fragmentShaderFile)});
     }
 
     public static CLDevice findGLCompatibleDevice(CLPlatform platform) {

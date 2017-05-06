@@ -2,7 +2,6 @@ package com.github.modelflat.coursework2.window;
 
 import com.github.modelflat.coursework2.core.MyGLCanvasWrapper;
 
-import java.awt.*;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 
@@ -11,11 +10,9 @@ import java.awt.event.WindowListener;
  */
 public class MainWindowEventHandler implements WindowListener {
 
-    private Frame mainWindow;
     private MyGLCanvasWrapper wrapper;
 
-    public MainWindowEventHandler(Frame mainWindow, MyGLCanvasWrapper wrapper) {
-        this.mainWindow = mainWindow;
+    public MainWindowEventHandler(MyGLCanvasWrapper wrapper) {
         this.wrapper = wrapper;
         wrapper.getAnimator().start();
     }
@@ -28,7 +25,6 @@ public class MainWindowEventHandler implements WindowListener {
     @Override
     public void windowClosing(WindowEvent e) {
         System.out.println("window closing...");
-        mainWindow.dispose();
         wrapper.getAnimator().stop();
     }
 

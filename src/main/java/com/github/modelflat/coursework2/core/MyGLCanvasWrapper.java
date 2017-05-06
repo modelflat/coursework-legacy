@@ -1,5 +1,7 @@
 package com.github.modelflat.coursework2.core;
 
+import com.github.modelflat.coursework2.util.GLUtil;
+import com.github.modelflat.coursework2.util.NoSuchResourceException;
 import com.jogamp.opencl.*;
 import com.jogamp.opencl.gl.CLGLContext;
 import com.jogamp.opencl.gl.CLGLImage2d;
@@ -24,9 +26,9 @@ import static com.jogamp.opengl.GL.GL_COLOR_BUFFER_BIT;
  */
 public class MyGLCanvasWrapper implements GLEventListener {
 
-    private static final String vertexShader = "textureRender.vert";
-    private static final String fragmentShader = "textureRender.frag";
-    private static final String fragmentClearShader = "textureRenderStatisticalClear.frag";
+    private static final String vertexShader = "glsl/textureRender.vert";
+    private static final String fragmentShader = "glsl/textureRender.frag";
+    private static final String fragmentClearShader = "glsl/textureRenderStatisticalClear.frag";
 
     private float[] vertexData = new float[]{
             // texture vertex coords: x, y
@@ -80,9 +82,9 @@ public class MyGLCanvasWrapper implements GLEventListener {
         return animator;
     }
 
-    private void initGLSide(GL4 gl, IntBuffer buffer) {
+    private void initGLSide(GL4 gl, IntBuffer buffer) throws NoSuchResourceException {
         // create texture
-        texture = Util.createTexture(gl, buffer, width, height);
+        texture = GLUtil.createTexture(gl, buffer, width, height);
 
         IntBuffer out = IntBuffer.wrap(new int[]{0});
         gl.glGenFramebuffers(1, out);
@@ -96,9 +98,9 @@ public class MyGLCanvasWrapper implements GLEventListener {
         }
         gl.glBindFramebuffer(GL4.GL_FRAMEBUFFER, 0);
 
-        postClearProgram = Util.createProgram(gl, vertexShader, fragmentClearShader);
+        postClearProgram = GLUtil.createProgram(gl, vertexShader, fragmentClearShader);
         // create program w/ 2 shaders
-        program = Util.createProgram(gl, vertexShader, fragmentShader);
+        program = GLUtil.createProgram(gl, vertexShader, fragmentShader);
         // get location of var "tex"
         int textureLocation = gl.glGetUniformLocation(program, "tex");
         gl.glUseProgram(program);
@@ -111,7 +113,7 @@ public class MyGLCanvasWrapper implements GLEventListener {
         }
 
         // create VBO containing draw information
-        vertexBufferObject = Util.createVBO(gl, vertexData);
+        vertexBufferObject = GLUtil.createVBO(gl, vertexData);
         // set buffer attribs
         gl.glBindBuffer(GL4.GL_ARRAY_BUFFER, vertexBufferObject);
         {
@@ -133,7 +135,7 @@ public class MyGLCanvasWrapper implements GLEventListener {
     private void initCLSide(GLContext context) {
         CLPlatform chosenPlatform = CLPlatform.getDefault();
         System.out.println(chosenPlatform);
-        CLDevice chosenDevice = Util.findGLCompatibleDevice(chosenPlatform);
+        CLDevice chosenDevice = GLUtil.findGLCompatibleDevice(chosenPlatform);
         if (chosenDevice == null) {
             throw new RuntimeException(String.format("no device supporting GL sharing on platform %s!",
                     chosenPlatform.toString()));
@@ -168,7 +170,11 @@ public class MyGLCanvasWrapper implements GLEventListener {
         // perform GL initialization
         GL4 gl = drawable.getGL().getGL4();
         IntBuffer buffer = GLBuffers.newDirectIntBuffer(width * height);
-        initGLSide(gl, buffer);
+        try {
+            initGLSide(gl, buffer);
+        } catch (NoSuchResourceException e) {
+            e.printStackTrace(); // TODO decide what to do
+        }
 
         // interop
         imageCL = clContext.createFromGLTexture2d(
@@ -194,6 +200,8 @@ public class MyGLCanvasWrapper implements GLEventListener {
         clContext.release();
     }
 
+    private boolean doEvolveBounds = false;
+
     private EvolvableParameter minX = new EvolvableParameter(-1, 0.01, -1.0, 0.0);
     private boolean doEvolveOnMinX = false;
     private EvolvableParameter maxX = new EvolvableParameter(1, -0.01, -0.0, 1.0);
@@ -217,6 +225,8 @@ public class MyGLCanvasWrapper implements GLEventListener {
 
     private boolean doEvolve = true;
 
+    private boolean doRecomputeFractal = true;
+
     @Override
     public void display(GLAutoDrawable drawable) {
         GL4 gl = drawable.getGL().getGL4();
@@ -230,23 +240,25 @@ public class MyGLCanvasWrapper implements GLEventListener {
 //        }
 //        gl.glBindFramebuffer(GL4.GL_FRAMEBUFFER, 0);
 
-        queue.putAcquireGLObject(imageCL);
+        if (doRecomputeFractal) {
+            queue.putAcquireGLObject(imageCL);
 
-        if (doCLClear) {
-            queue.put2DRangeKernel(clearKernel, 0, 0,
-                    width, height, 0, 0);
-        }
+            if (doCLClear) {
+                queue.put2DRangeKernel(clearKernel, 0, 0,
+                        width, height, 0, 0);
+            }
 
-        newtonKernelWrapper.runOn(queue);
+            newtonKernelWrapper.runOn(queue);
 
-        queue.putReleaseGLObject(imageCL);
+            queue.putReleaseGLObject(imageCL);
 
-        if (doWaitForCL) {
-            queue.finish();
-        }
+            if (doWaitForCL) {
+                queue.finish();
+            }
 
-        if (doEvolve) {
-            evolve();
+            if (doEvolve) {
+                evolve();
+            }
         }
 
         gl.glClear(GL_COLOR_BUFFER_BIT);
@@ -272,7 +284,6 @@ public class MyGLCanvasWrapper implements GLEventListener {
     private void evolve() {
         if (doEvolveOnT) {
             t.evolve();
-            System.out.println(t);
             newtonKernelWrapper.setT(t.getValue());
         }
 
@@ -287,7 +298,7 @@ public class MyGLCanvasWrapper implements GLEventListener {
         }
 
 
-        if (doEvolveOnMinX || doEvolveOnMaxX || doEvolveOnMinY || doEvolveOnMaxY) {
+        if (doEvolveBounds) {
             if (doEvolveOnMinX) {
                 minX.evolve();
             }
@@ -446,6 +457,22 @@ public class MyGLCanvasWrapper implements GLEventListener {
 
     public void setDoEvolve(boolean doEvolve) {
         this.doEvolve = doEvolve;
+    }
+
+    public boolean doEvolveBounds() {
+        return doEvolveBounds;
+    }
+
+    public void setDoEvolveBounds(boolean doEvolveBounds) {
+        this.doEvolveBounds = doEvolveBounds;
+    }
+
+    public boolean doRecomputeFractal() {
+        return doRecomputeFractal;
+    }
+
+    public void setDoRecomputeFractal(boolean doRecomputeFractal) {
+        this.doRecomputeFractal = doRecomputeFractal;
     }
 
     public GLCanvas getCanvas() {
