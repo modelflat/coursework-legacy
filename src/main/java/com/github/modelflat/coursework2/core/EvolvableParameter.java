@@ -83,7 +83,7 @@ public class EvolvableParameter {
                     }
                 }
             } else {
-                // TODO make inc restoration happens smoother
+                // TODO make inc restoration happen smoother
                 inc = signum(inc) * abs(abs(baseInc) - abs(inc)) * factor;
                 if (baseInc < inc) {
                     factor = 1. / factor;

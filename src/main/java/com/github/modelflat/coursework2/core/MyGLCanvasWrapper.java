@@ -25,31 +25,9 @@ import static com.jogamp.opengl.GL.GL_COLOR_BUFFER_BIT;
  */
 public class MyGLCanvasWrapper implements GLEventListener {
 
-    private static final String vertexShader =
-            "#version 400\n" +
-            "layout (location = 0) in vec2 position;\n" +
-            "layout (location = 1) in vec2 vertexUV;\n" +
-            "out vec2 fragmentUV;\n" +
-            "void main() {\n" +
-            "    gl_Position = vec4(position, 1.0, 1.0);\n" +
-            "    fragmentUV = vertexUV;\n" +
-            "}";
-
-    private static final String fragmentShader =
-            "#version 400\n" +
-            "in vec2 fragmentUV;\n" +
-            "out vec4 out_color;\n" +
-            "uniform sampler2D tex;\n" +
-            "void main() {\n" +
-            "    out_color = texture(tex, fragmentUV).rgba;\n" +
-            "}";
-
-    private static final String fragmentClearShader =
-            "#version 400\n" +
-                    "out vec4 out_color;\n" +
-                    "void main() {\n" +
-                    "    out_color = vec4(0.0, 0.0, 0.0, 0.0);\n" +
-                    "}";
+    private static final String vertexShader = "textureRender.vert";
+    private static final String fragmentShader = "textureRender.frag";
+    private static final String fragmentClearShader = "textureRenderStatisticalClear.frag";
 
     private float[] vertexData = new float[]{
             // texture vertex coords: x, y
@@ -79,7 +57,7 @@ public class MyGLCanvasWrapper implements GLEventListener {
     private int width;
     private int height;
 
-    private int clearProgram;
+    private int postClearProgram;
     private int textureFramebuffer;
     private IntBuffer textureDrawBuffers;
 
@@ -119,7 +97,7 @@ public class MyGLCanvasWrapper implements GLEventListener {
         }
         gl.glBindFramebuffer(GL4.GL_FRAMEBUFFER, 0);
 
-        clearProgram = Util.createProgram(gl, null, fragmentClearShader);
+        postClearProgram = Util.createProgram(gl, vertexShader, fragmentClearShader);
         // create program w/ 2 shaders
         program = Util.createProgram(gl, vertexShader, fragmentShader);
         // get location of var "tex"
@@ -235,6 +213,7 @@ public class MyGLCanvasWrapper implements GLEventListener {
     private boolean doEvolveOnCImag = false;
 
     private boolean doCLClear = true;
+    private boolean doPostCLear = true;
     private boolean doWaitForCL = true;
 
     private boolean doEvolve = true;
@@ -274,7 +253,11 @@ public class MyGLCanvasWrapper implements GLEventListener {
         }
 
         gl.glClear(GL_COLOR_BUFFER_BIT);
-        gl.glUseProgram(program);
+        if (doPostCLear) {
+            gl.glUseProgram(postClearProgram);
+        } else {
+            gl.glUseProgram(program);
+        }
         {
             gl.glBindBuffer(GL4.GL_ARRAY_BUFFER, vertexBufferObject);
             {

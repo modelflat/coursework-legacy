@@ -9,9 +9,8 @@ import com.jogamp.opengl.util.texture.Texture;
 import com.jogamp.opengl.util.texture.TextureData;
 import com.jogamp.opengl.util.texture.TextureIO;
 
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
+import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 
@@ -89,6 +88,11 @@ public class Util {
         if (fragmentShader != null) {
             int frag = createShader(gl, GL4.GL_FRAGMENT_SHADER, fragmentShader);
             gl.glAttachShader(prog, frag);
+            IntBuffer logSize = IntBuffer.wrap(new int[1]);
+            gl.glGetShaderiv(frag, GL4.GL_INFO_LOG_LENGTH, logSize);
+            ByteBuffer buf = ByteBuffer.allocate(logSize.get(0) + 1);
+            gl.glGetShaderInfoLog(frag, logSize.get(0), logSize, buf);
+            System.out.println(new String(buf.array()));
             gl.glDeleteShader(frag);
         }
 
@@ -96,11 +100,23 @@ public class Util {
         return prog;
     }
 
-    public static <T extends GL3> int createProgram(T gl,
-                                                    String vertexShader, String fragmentShader) {
-        return createProgram(gl,
-                vertexShader == null ? null : new String[]{vertexShader},
-                fragmentShader == null ? null : new String[]{fragmentShader});
+    public static <T extends GL3> int createProgram(T gl, String vertexShaderFile, String fragmentShaderFile) {
+        StringBuilder vertexShader = new StringBuilder();
+        String basePath = "./src/main/resources/glsl/";
+        try (BufferedReader br = new BufferedReader(new FileReader(basePath + vertexShaderFile))) {
+            br.lines().forEach((line) -> vertexShader.append(line).append('\n'));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        StringBuilder fragmentShader = new StringBuilder();
+        try (BufferedReader br = new BufferedReader(new FileReader(basePath + fragmentShaderFile))) {
+            br.lines().forEach((line) -> fragmentShader.append(line).append('\n'));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return createProgram(gl, new String[]{vertexShader.toString()}, new String[]{fragmentShader.toString()});
     }
 
     public static CLDevice findGLCompatibleDevice(CLPlatform platform) {
