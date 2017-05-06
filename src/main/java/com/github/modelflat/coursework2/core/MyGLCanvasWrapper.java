@@ -16,7 +16,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.IntBuffer;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.jogamp.opengl.GL.GL_COLOR_BUFFER_BIT;
 
@@ -178,7 +177,7 @@ public class MyGLCanvasWrapper implements GLEventListener {
                 0, CLMemory.Mem.WRITE_ONLY);
 
         // kernel
-        newtonKernelWrapper.setBounds(-1.f, 1.f, -1.f, 1.f);
+        newtonKernelWrapper.setBounds(minX.getValue(), maxX.getValue(), minY.getValue(), maxY.getValue());
         newtonKernelWrapper.setC(cReal.getValue(), cImag.getValue());
         newtonKernelWrapper.setT(t.getValue());
         newtonKernelWrapper.setRunParams(64, 4, 150, 3);
@@ -195,16 +194,16 @@ public class MyGLCanvasWrapper implements GLEventListener {
         clContext.release();
     }
 
-    private EvolvableParameter minX = new EvolvableParameter(-.001, 0.01, -1.0, 0.0);
+    private EvolvableParameter minX = new EvolvableParameter(-1, 0.01, -1.0, 0.0);
     private boolean doEvolveOnMinX = false;
-    private EvolvableParameter maxX = new EvolvableParameter(.001, -0.01, -0.0, 1.0);
+    private EvolvableParameter maxX = new EvolvableParameter(1, -0.01, -0.0, 1.0);
     private boolean doEvolveOnMaxX = false;
-    private EvolvableParameter minY = new EvolvableParameter(-.001, 0.01, -1.0, 0.0);
+    private EvolvableParameter minY = new EvolvableParameter(-1, 0.01, -1.0, 0.0);
     private boolean doEvolveOnMinY = false;
-    private EvolvableParameter maxY = new EvolvableParameter(.001, -0.01, -0.0, 1.0);
+    private EvolvableParameter maxY = new EvolvableParameter(1, -0.01, -0.0, 1.0);
     private boolean doEvolveOnMaxY = false;
 
-    private EvolvableParameter t = new EvolvableParameter(-1.0, .01, -1.0, 1.0,
+    private EvolvableParameter t = new EvolvableParameter(-1.0, .02, -1.0, 1.0,
             0.0, 1e-12);
     private boolean doEvolveOnT = true;
     private EvolvableParameter cReal = new EvolvableParameter(.5, -.05, -1.0);
@@ -218,12 +217,10 @@ public class MyGLCanvasWrapper implements GLEventListener {
 
     private boolean doEvolve = true;
 
-    private AtomicBoolean clearOnce = new AtomicBoolean(true);
-
     @Override
     public void display(GLAutoDrawable drawable) {
         GL4 gl = drawable.getGL().getGL4();
-        long timeNano = System.nanoTime();
+
         // clear texture
         // FIXME not working properly; buffer seems shared with screen (?!)
 //        gl.glBindFramebuffer(GL4.GL_FRAMEBUFFER, textureFramebuffer);
@@ -307,7 +304,79 @@ public class MyGLCanvasWrapper implements GLEventListener {
         }
     }
 
-    public boolean isDoEvolveOnT() {
+    public EvolvableParameter getMinX() {
+        return minX;
+    }
+
+    public void setMinX(EvolvableParameter minX) {
+        this.minX = minX;
+    }
+
+    public boolean doEvolveOnMinX() {
+        return doEvolveOnMinX;
+    }
+
+    public void setDoEvolveOnMinX(boolean doEvolveOnMinX) {
+        this.doEvolveOnMinX = doEvolveOnMinX;
+    }
+
+    public EvolvableParameter getMaxX() {
+        return maxX;
+    }
+
+    public void setMaxX(EvolvableParameter maxX) {
+        this.maxX = maxX;
+    }
+
+    public boolean doEvolveOnMaxX() {
+        return doEvolveOnMaxX;
+    }
+
+    public void setDoEvolveOnMaxX(boolean doEvolveOnMaxX) {
+        this.doEvolveOnMaxX = doEvolveOnMaxX;
+    }
+
+    public EvolvableParameter getMinY() {
+        return minY;
+    }
+
+    public void setMinY(EvolvableParameter minY) {
+        this.minY = minY;
+    }
+
+    public boolean doEvolveOnMinY() {
+        return doEvolveOnMinY;
+    }
+
+    public void setDoEvolveOnMinY(boolean doEvolveOnMinY) {
+        this.doEvolveOnMinY = doEvolveOnMinY;
+    }
+
+    public EvolvableParameter getMaxY() {
+        return maxY;
+    }
+
+    public void setMaxY(EvolvableParameter maxY) {
+        this.maxY = maxY;
+    }
+
+    public boolean doEvolveOnMaxY() {
+        return doEvolveOnMaxY;
+    }
+
+    public void setDoEvolveOnMaxY(boolean doEvolveOnMaxY) {
+        this.doEvolveOnMaxY = doEvolveOnMaxY;
+    }
+
+    public EvolvableParameter getT() {
+        return t;
+    }
+
+    public void setT(EvolvableParameter t) {
+        this.t = t;
+    }
+
+    public boolean doEvolveOnT() {
         return doEvolveOnT;
     }
 
@@ -315,7 +384,15 @@ public class MyGLCanvasWrapper implements GLEventListener {
         this.doEvolveOnT = doEvolveOnT;
     }
 
-    public boolean isDoEvolveOnCReal() {
+    public EvolvableParameter getcReal() {
+        return cReal;
+    }
+
+    public void setcReal(EvolvableParameter cReal) {
+        this.cReal = cReal;
+    }
+
+    public boolean doEvolveOnCReal() {
         return doEvolveOnCReal;
     }
 
@@ -323,7 +400,15 @@ public class MyGLCanvasWrapper implements GLEventListener {
         this.doEvolveOnCReal = doEvolveOnCReal;
     }
 
-    public boolean isDoEvolveOnCImag() {
+    public EvolvableParameter getcImag() {
+        return cImag;
+    }
+
+    public void setcImag(EvolvableParameter cImag) {
+        this.cImag = cImag;
+    }
+
+    public boolean doEvolveOnCImag() {
         return doEvolveOnCImag;
     }
 
@@ -331,7 +416,7 @@ public class MyGLCanvasWrapper implements GLEventListener {
         this.doEvolveOnCImag = doEvolveOnCImag;
     }
 
-    public boolean isDoCLClear() {
+    public boolean doCLClear() {
         return doCLClear;
     }
 
@@ -339,12 +424,28 @@ public class MyGLCanvasWrapper implements GLEventListener {
         this.doCLClear = doCLClear;
     }
 
-    public boolean isDoWaitForCL() {
+    public boolean doPostCLear() {
+        return doPostCLear;
+    }
+
+    public void setDoPostCLear(boolean doPostCLear) {
+        this.doPostCLear = doPostCLear;
+    }
+
+    public boolean doWaitForCL() {
         return doWaitForCL;
     }
 
     public void setDoWaitForCL(boolean doWaitForCL) {
         this.doWaitForCL = doWaitForCL;
+    }
+
+    public boolean doEvolve() {
+        return doEvolve;
+    }
+
+    public void setDoEvolve(boolean doEvolve) {
+        this.doEvolve = doEvolve;
     }
 
     public GLCanvas getCanvas() {
