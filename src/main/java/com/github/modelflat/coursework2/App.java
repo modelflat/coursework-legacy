@@ -18,7 +18,7 @@ import java.awt.*;
 public class App {
 
     private static String defaultWindowName = "Newton Fractal";
-    private static boolean enableCites = true;
+    private static boolean enableCites = false;
     private static String citeLanguage = "en";
 
     private static App instance;
@@ -56,7 +56,7 @@ public class App {
     private void initFX(JFXPanel fxPanel) {
         Group root = new Group();
         try {
-            root.getChildren().addAll((AnchorPane) Util.loadFXML("main_control_pane.fxml"));
+            root.getChildren().addAll((AnchorPane) Util.loadFXML("fxml/main_control_pane.fxml"));
         } catch (NoSuchResourceException e) {
             e.printStackTrace();
         }

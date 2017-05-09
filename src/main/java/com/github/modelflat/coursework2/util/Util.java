@@ -12,6 +12,21 @@ import java.net.URL;
  */
 public class Util {
 
+    public static void loadCustomControl(String name, Object controlObj) throws NoSuchResourceException {
+        try {
+            URL resourceUrl = FXMLLoader.getDefaultClassLoader().getResource(name);
+            if (resourceUrl == null) {
+                throw new NoSuchResourceException(name);
+            }
+            FXMLLoader loader = new FXMLLoader(resourceUrl);
+            loader.setRoot(controlObj);
+            loader.setController(controlObj);
+            loader.load();
+        } catch (IOException e) {
+            throw new NoSuchResourceException(e);
+        }
+    }
+
     public static Object loadFXML(String name) throws NoSuchResourceException {
         try {
             URL resourceUrl = FXMLLoader.getDefaultClassLoader().getResource(name);

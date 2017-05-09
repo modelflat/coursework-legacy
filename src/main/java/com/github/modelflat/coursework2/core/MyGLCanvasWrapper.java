@@ -32,10 +32,10 @@ public class MyGLCanvasWrapper implements GLEventListener {
 
     private float[] vertexData = new float[]{
             // texture vertex coords: x, y
-            0.95f, 0.95f,
-            0.95f, -0.95f,
-            -0.95f, -0.95f,
-            -0.95f, 0.95f,
+            1.0f, 1.0f,
+            1.0f, -1.0f,
+            -1.0f, -1.0f,
+            -1.0f, 1.0f,
             // texture UV coords (for texture mapping
             1.f, 1.f,
             1.f, 0.f,
@@ -64,6 +64,24 @@ public class MyGLCanvasWrapper implements GLEventListener {
 
     private GLCanvas canvas;
     private FPSAnimator animator;
+
+    private boolean doEvolveBounds = false;
+
+    private EvolvableParameter minX = new EvolvableParameter(false, -1, 0.01, -1.0, 0.0);
+    private EvolvableParameter maxX = new EvolvableParameter(false, 1, -0.01, 0.0, 1.0);
+    private EvolvableParameter minY = new EvolvableParameter(false, -1, 0.01, -1.0, 0.0);
+    private EvolvableParameter maxY = new EvolvableParameter(false, 1, -0.01, -0.0, 1.0);
+
+    private EvolvableParameter t = new EvolvableParameter(new ApproachingEvolutionStrategy(),
+            -1.0, .02, -1.0, 1.0);
+    private EvolvableParameter cReal = new EvolvableParameter(false, .5, -.05, -1.0, 1.0);
+    private EvolvableParameter cImag = new EvolvableParameter(false, -.5, .05, -1.0, 1.0);
+
+    private boolean doCLClear = true;
+    private boolean doPostCLear = true;
+    private boolean doWaitForCL = true;
+    private boolean doEvolve = true;
+    private boolean doRecomputeFractal = true;
 
     public MyGLCanvasWrapper(int width, int height) {
         this.width = width;
@@ -200,33 +218,6 @@ public class MyGLCanvasWrapper implements GLEventListener {
         clContext.release();
     }
 
-    private boolean doEvolveBounds = false;
-
-    private EvolvableParameter minX = new EvolvableParameter(-1, 0.01, -1.0, 0.0);
-    private boolean doEvolveOnMinX = false;
-    private EvolvableParameter maxX = new EvolvableParameter(1, -0.01, -0.0, 1.0);
-    private boolean doEvolveOnMaxX = false;
-    private EvolvableParameter minY = new EvolvableParameter(-1, 0.01, -1.0, 0.0);
-    private boolean doEvolveOnMinY = false;
-    private EvolvableParameter maxY = new EvolvableParameter(1, -0.01, -0.0, 1.0);
-    private boolean doEvolveOnMaxY = false;
-
-    private EvolvableParameter t = new EvolvableParameter(-1.0, .02, -1.0, 1.0,
-            0.0, 1e-12);
-    private boolean doEvolveOnT = true;
-    private EvolvableParameter cReal = new EvolvableParameter(.5, -.05, -1.0);
-    private boolean doEvolveOnCReal = false;
-    private EvolvableParameter cImag = new EvolvableParameter(-.5, .05, -1.0);
-    private boolean doEvolveOnCImag = false;
-
-    private boolean doCLClear = true;
-    private boolean doPostCLear = true;
-    private boolean doWaitForCL = true;
-
-    private boolean doEvolve = true;
-
-    private boolean doRecomputeFractal = true;
-
     @Override
     public void display(GLAutoDrawable drawable) {
         GL4 gl = drawable.getGL().getGL4();
@@ -282,35 +273,15 @@ public class MyGLCanvasWrapper implements GLEventListener {
     }
 
     private void evolve() {
-        if (doEvolveOnT) {
-            t.evolve();
+        if (t.evolve()) {
             newtonKernelWrapper.setT(t.getValue());
         }
 
-        if (doEvolveOnCReal || doEvolveOnCImag) {
-            if (doEvolveOnCReal) {
-                cReal.evolve();
-            }
-            if (doEvolveOnCImag) {
-                cImag.evolve();
-            }
+        if (cReal.evolve() | cImag.evolve()) {
             newtonKernelWrapper.setC(cReal.getValue(), cImag.getValue());
         }
 
-
-        if (doEvolveBounds) {
-            if (doEvolveOnMinX) {
-                minX.evolve();
-            }
-            if (doEvolveOnMaxX) {
-                maxX.evolve();
-            }
-            if (doEvolveOnMinY) {
-                minY.evolve();
-            }
-            if (doEvolveOnMaxY) {
-                maxY.evolve();
-            }
+        if (doEvolveBounds && (minY.evolve() | maxY.evolve() | maxX.evolve() | minX.evolve())) {
             newtonKernelWrapper.setBounds(minX.getValue(), maxX.getValue(), minY.getValue(), maxY.getValue());
         }
     }
@@ -319,112 +290,28 @@ public class MyGLCanvasWrapper implements GLEventListener {
         return minX;
     }
 
-    public void setMinX(EvolvableParameter minX) {
-        this.minX = minX;
-    }
-
-    public boolean doEvolveOnMinX() {
-        return doEvolveOnMinX;
-    }
-
-    public void setDoEvolveOnMinX(boolean doEvolveOnMinX) {
-        this.doEvolveOnMinX = doEvolveOnMinX;
-    }
-
     public EvolvableParameter getMaxX() {
         return maxX;
-    }
-
-    public void setMaxX(EvolvableParameter maxX) {
-        this.maxX = maxX;
-    }
-
-    public boolean doEvolveOnMaxX() {
-        return doEvolveOnMaxX;
-    }
-
-    public void setDoEvolveOnMaxX(boolean doEvolveOnMaxX) {
-        this.doEvolveOnMaxX = doEvolveOnMaxX;
     }
 
     public EvolvableParameter getMinY() {
         return minY;
     }
 
-    public void setMinY(EvolvableParameter minY) {
-        this.minY = minY;
-    }
-
-    public boolean doEvolveOnMinY() {
-        return doEvolveOnMinY;
-    }
-
-    public void setDoEvolveOnMinY(boolean doEvolveOnMinY) {
-        this.doEvolveOnMinY = doEvolveOnMinY;
-    }
-
     public EvolvableParameter getMaxY() {
         return maxY;
-    }
-
-    public void setMaxY(EvolvableParameter maxY) {
-        this.maxY = maxY;
-    }
-
-    public boolean doEvolveOnMaxY() {
-        return doEvolveOnMaxY;
-    }
-
-    public void setDoEvolveOnMaxY(boolean doEvolveOnMaxY) {
-        this.doEvolveOnMaxY = doEvolveOnMaxY;
     }
 
     public EvolvableParameter getT() {
         return t;
     }
 
-    public void setT(EvolvableParameter t) {
-        this.t = t;
-    }
-
-    public boolean doEvolveOnT() {
-        return doEvolveOnT;
-    }
-
-    public void setDoEvolveOnT(boolean doEvolveOnT) {
-        this.doEvolveOnT = doEvolveOnT;
-    }
-
     public EvolvableParameter getcReal() {
         return cReal;
     }
 
-    public void setcReal(EvolvableParameter cReal) {
-        this.cReal = cReal;
-    }
-
-    public boolean doEvolveOnCReal() {
-        return doEvolveOnCReal;
-    }
-
-    public void setDoEvolveOnCReal(boolean doEvolveOnCReal) {
-        this.doEvolveOnCReal = doEvolveOnCReal;
-    }
-
     public EvolvableParameter getcImag() {
         return cImag;
-    }
-
-    public void setcImag(EvolvableParameter cImag) {
-        this.cImag = cImag;
-    }
-
-    public boolean doEvolveOnCImag() {
-        return doEvolveOnCImag;
-    }
-
-    public void setDoEvolveOnCImag(boolean doEvolveOnCImag) {
-        this.doEvolveOnCImag = doEvolveOnCImag;
     }
 
     public boolean doCLClear() {

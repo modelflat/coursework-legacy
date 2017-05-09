@@ -1,14 +1,18 @@
 package com.github.modelflat.coursework2.ui;
 
 import com.github.modelflat.coursework2.App;
+import com.github.modelflat.coursework2.core.EvolvableParameter;
 import com.github.modelflat.coursework2.core.MyGLCanvasWrapper;
+import com.github.modelflat.coursework2.util.NoSuchResourceException;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
+import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 
 /**
  * Created on 06.05.2017.
@@ -38,6 +42,7 @@ public class MainControlPaneController {
     private CheckBox doEvolveTCheckBox;
     @FXML
     private Button tEvolutionCustomizeButton;
+    private Stage tEvolutionCustomizer;
     @FXML
     private Label tCurrentStateLabel;
     //
@@ -45,6 +50,7 @@ public class MainControlPaneController {
     private CheckBox doEvolveCRealCheckBox;
     @FXML
     private Button cRealEvolutionCustomizeButton;
+    private Stage cRealEvolutionCustomizer;
     @FXML
     private Label cRealCurrentStateLabel;
     //
@@ -52,6 +58,7 @@ public class MainControlPaneController {
     private CheckBox doEvolveCImagCheckBox;
     @FXML
     private Button cImagEvolutionCustomizeButton;
+    private Stage cImagEvolutionCustomizer;
     @FXML
     private Label cImagCurrentStateLabel;
     //
@@ -62,6 +69,7 @@ public class MainControlPaneController {
     private CheckBox doEvolveXMinCheckBox;
     @FXML
     private Button xMinEvolutionCustomizeButton;
+    private Stage xMinEvolutionCustomizer;
     @FXML
     private Label xMinCurrentStateLabel;
     //
@@ -69,6 +77,7 @@ public class MainControlPaneController {
     private CheckBox doEvolveXMaxCheckBox;
     @FXML
     private Button xMaxEvolutionCustomizeButton;
+    private Stage xMaxEvolutionCustomizer;
     @FXML
     private Label xMaxCurrentStateLabel;
     //
@@ -76,6 +85,7 @@ public class MainControlPaneController {
     private CheckBox doEvolveYMinCheckBox;
     @FXML
     private Button yMinEvolutionCustomizeButton;
+    private Stage yMinEvolutionCustomizer;
     @FXML
     private Label yMinCurrentStateLabel;
     //
@@ -83,6 +93,7 @@ public class MainControlPaneController {
     private CheckBox doEvolveYMaxCheckBox;
     @FXML
     private Button yMaxEvolutionCustomizeButton;
+    private Stage yMaxEvolutionCustomizer;
     @FXML
     private Label yMaxCurrentStateLabel;
     // ==========================================================================
@@ -100,14 +111,14 @@ public class MainControlPaneController {
         doPostClearCheckBox.setSelected(wrapper.doPostCLear());
 
         setEvolveChecked(wrapper.doEvolve());
-        doEvolveTCheckBox.setSelected(wrapper.doEvolveOnT());
-        doEvolveCRealCheckBox.setSelected(wrapper.doEvolveOnCReal());
-        doEvolveCImagCheckBox.setSelected(wrapper.doEvolveOnCImag());
+        doEvolveTCheckBox.setSelected(wrapper.getT().evolving());
+        doEvolveCRealCheckBox.setSelected(wrapper.getcReal().evolving());
+        doEvolveCImagCheckBox.setSelected(wrapper.getcImag().evolving());
         setEvolveBoundsChecked(wrapper.doEvolveBounds());
-        doEvolveXMinCheckBox.setSelected(wrapper.doEvolveOnMinX());
-        doEvolveXMaxCheckBox.setSelected(wrapper.doEvolveOnMaxX());
-        doEvolveYMinCheckBox.setSelected(wrapper.doEvolveOnMinY());
-        doEvolveYMaxCheckBox.setSelected(wrapper.doEvolveOnMaxY());
+        doEvolveXMinCheckBox.setSelected(wrapper.getMinX().evolving());
+        doEvolveXMaxCheckBox.setSelected(wrapper.getMaxX().evolving());
+        doEvolveYMinCheckBox.setSelected(wrapper.getMinY().evolving());
+        doEvolveYMaxCheckBox.setSelected(wrapper.getMaxY().evolving());
 
         // set up parameter watcher thread
         watcher = new Thread(() -> {
@@ -158,13 +169,13 @@ public class MainControlPaneController {
                         && doEvolveXMaxCheckBox.isSelected() && doEvolveYMaxCheckBox.isSelected())) {
             MyGLCanvasWrapper wrapper = App.getInstance().getWrapper();
             doEvolveXMinCheckBox.setSelected(state);
-            wrapper.setDoEvolveOnMinX(state);
+            wrapper.getMinX().setDoEvolve(state);
             doEvolveXMaxCheckBox.setSelected(state);
-            wrapper.setDoEvolveOnMaxX(state);
+            wrapper.getMaxX().setDoEvolve(state);
             doEvolveYMinCheckBox.setSelected(state);
-            wrapper.setDoEvolveOnMinY(state);
+            wrapper.getMinY().setDoEvolve(state);
             doEvolveYMaxCheckBox.setSelected(state);
-            wrapper.setDoEvolveOnMaxY(state);
+            wrapper.getMaxY().setDoEvolve(state);
         }
     }
 
@@ -173,83 +184,145 @@ public class MainControlPaneController {
         metaEvolutionPaneVBox.setDisable(!state);
     }
 
-    public void doPostClearCheckBoxClicked(MouseEvent mouseEvent) {
+    public void doPostClearCheckBoxClicked() {
         App.getInstance().getWrapper().setDoPostCLear(doPostClearCheckBox.isSelected());
     }
 
-    public void doEvolveCheckBoxClicked(MouseEvent mouseEvent) {
+    public void doEvolveCheckBoxClicked() {
         setEvolveChecked(doEvolveCheckBox.isSelected());
         App.getInstance().getWrapper().setDoEvolve(doEvolveCheckBox.isSelected());
     }
 
-    public void doCLClearCheckBoxClicked(MouseEvent mouseEvent) {
+    public void doCLClearCheckBoxClicked() {
         App.getInstance().getWrapper().setDoCLClear(doCLClearCheckBox.isSelected());
     }
 
-    public void doEvolveTCheckBoxClicked(MouseEvent mouseEvent) {
-        App.getInstance().getWrapper().setDoEvolveOnT(doEvolveTCheckBox.isSelected());
+    public void doEvolveTCheckBoxClicked() {
+        App.getInstance().getWrapper().getT().setDoEvolve(doEvolveTCheckBox.isSelected());
     }
 
-    public void tEvolutionCustomizeButtonClicked(MouseEvent mouseEvent) {
-        System.out.println("customization requested...");
+    public void tEvolutionCustomizeButtonClicked() {
+        if (tEvolutionCustomizer == null) {
+            tEvolutionCustomizer = createCustomizer("t", App.getInstance().getWrapper().getT());
+        }
+        tEvolutionCustomizer.show();
+        tEvolutionCustomizer.toFront();
     }
 
-    public void doEvolveCRealCheckBoxClicked(MouseEvent mouseEvent) {
-        App.getInstance().getWrapper().setDoEvolveOnCReal(doEvolveCRealCheckBox.isSelected());
+    public void doEvolveCRealCheckBoxClicked() {
+        App.getInstance().getWrapper().getcReal().setDoEvolve(doEvolveCRealCheckBox.isSelected());
     }
 
-    public void cRealEvolutionCustomizeButtonClicked(MouseEvent mouseEvent) {
-        System.out.println("customization requested...");
+    public void cRealEvolutionCustomizeButtonClicked() {
+        if (cRealEvolutionCustomizer == null) {
+            cRealEvolutionCustomizer = createCustomizer("cReal", App.getInstance().getWrapper().getcReal());
+        }
+        cRealEvolutionCustomizer.show();
+        cRealEvolutionCustomizer.toFront();
     }
 
-    public void doEvolveCImagCheckBoxClicked(MouseEvent mouseEvent) {
-        App.getInstance().getWrapper().setDoEvolveOnCImag(doEvolveCImagCheckBox.isSelected());
+    public void doEvolveCImagCheckBoxClicked() {
+        App.getInstance().getWrapper().getcImag().setDoEvolve(doEvolveCImagCheckBox.isSelected());
     }
 
-    public void cImagEvolutionCustomizeButtonClicked(MouseEvent mouseEvent) {
-        System.out.println("customization requested...");
+    public void cImagEvolutionCustomizeButtonClicked() {
+        if (cImagEvolutionCustomizer == null) {
+            cImagEvolutionCustomizer = createCustomizer("cImag", App.getInstance().getWrapper().getcImag());
+        }
+        cImagEvolutionCustomizer.show();
+        cImagEvolutionCustomizer.toFront();
     }
 
-    public void doEvolveBoundsCheckBoxClicked(MouseEvent mouseEvent) {
+    public void doEvolveBoundsCheckBoxClicked() {
         setEvolveBoundsChecked(doEvolveBoundsCheckBox.isSelected());
         App.getInstance().getWrapper().setDoEvolveBounds(doEvolveBoundsCheckBox.isSelected());
     }
 
-    public void doEvolveXMinCheckBoxClicked(MouseEvent mouseEvent) {
-        App.getInstance().getWrapper().setDoEvolveOnMinX(doEvolveXMinCheckBox.isSelected());
+    public void doEvolveXMinCheckBoxClicked() {
+        if (doEvolveXMinCheckBox.isSelected()) {
+            App.getInstance().getWrapper().setDoEvolveBounds(true);
+        }
+        App.getInstance().getWrapper().getMinX().setDoEvolve(doEvolveXMinCheckBox.isSelected());
     }
 
-    public void xMinEvolutionCustomizeButtonClicked(MouseEvent mouseEvent) {
-        System.out.println("customization requested...");
+    public void xMinEvolutionCustomizeButtonClicked() {
+        if (xMinEvolutionCustomizer == null) {
+            xMinEvolutionCustomizer = createCustomizer("xMin", App.getInstance().getWrapper().getMinX());
+        }
+        xMinEvolutionCustomizer.show();
+        xMinEvolutionCustomizer.toFront();
     }
 
-    public void doEvolveXMaxCheckBoxClicked(MouseEvent mouseEvent) {
-        App.getInstance().getWrapper().setDoEvolveOnMaxX(doEvolveXMaxCheckBox.isSelected());
+    public void doEvolveXMaxCheckBoxClicked() {
+        if (doEvolveXMaxCheckBox.isSelected()) {
+            App.getInstance().getWrapper().setDoEvolveBounds(true);
+        }
+        App.getInstance().getWrapper().getMaxX().setDoEvolve(doEvolveXMaxCheckBox.isSelected());
     }
 
-    public void xMaxEvolutionCustomizeButtonClicked(MouseEvent mouseEvent) {
-        System.out.println("customization requested...");
+    public void xMaxEvolutionCustomizeButtonClicked() {
+        if (xMaxEvolutionCustomizer == null) {
+            xMaxEvolutionCustomizer = createCustomizer("xMax", App.getInstance().getWrapper().getMaxX());
+        }
+        xMaxEvolutionCustomizer.show();
+        xMaxEvolutionCustomizer.toFront();
     }
 
-    public void doEvolveYMinCheckBoxClicked(MouseEvent mouseEvent) {
-        App.getInstance().getWrapper().setDoEvolveOnMinY(doEvolveYMinCheckBox.isSelected());
+    public void doEvolveYMinCheckBoxClicked() {
+        if (doEvolveYMinCheckBox.isSelected()) {
+            App.getInstance().getWrapper().setDoEvolveBounds(true);
+        }
+        App.getInstance().getWrapper().getMinY().setDoEvolve(doEvolveYMinCheckBox.isSelected());
     }
 
-    public void yMinEvolutionCustomizeButtonClicked(MouseEvent mouseEvent) {
-        System.out.println("customization requested...");
+    public void yMinEvolutionCustomizeButtonClicked() {
+        if (yMinEvolutionCustomizer == null) {
+            yMinEvolutionCustomizer = createCustomizer("yMin", App.getInstance().getWrapper().getMinY());
+        }
+        yMinEvolutionCustomizer.show();
+        yMinEvolutionCustomizer.toFront();
     }
 
-    public void doEvolveYMaxCheckBoxClicked(MouseEvent mouseEvent) {
-        App.getInstance().getWrapper().setDoEvolveOnMaxY(doEvolveYMaxCheckBox.isSelected());
+    public void doEvolveYMaxCheckBoxClicked() {
+        if (doEvolveYMaxCheckBox.isSelected()) {
+            App.getInstance().getWrapper().setDoEvolveBounds(true);
+        }
+        App.getInstance().getWrapper().getMaxY().setDoEvolve(doEvolveYMaxCheckBox.isSelected());
     }
 
-    public void yMaxEvolutionCustomizeButtonClicked(MouseEvent mouseEvent) {
-        System.out.println("customization requested...");
+    public void yMaxEvolutionCustomizeButtonClicked() {
+        if (yMaxEvolutionCustomizer == null) {
+            yMaxEvolutionCustomizer = createCustomizer("yMax", App.getInstance().getWrapper().getMaxY());
+        }
+        yMaxEvolutionCustomizer.show();
+        yMaxEvolutionCustomizer.toFront();
     }
 
-    public void doRecomputeFractalCheckBoxClicked(MouseEvent mouseEvent) {
+    public void doRecomputeFractalCheckBoxClicked() {
         setRecomputeChecked(doRecomputeFractalCheckBox.isSelected());
         App.getInstance().getWrapper().setDoRecomputeFractal(doRecomputeFractalCheckBox.isSelected());
+    }
+
+    private Stage createCustomizer(String name, EvolvableParameter parameter) {
+        try {
+            ParamCustomizationPane p = new ParamCustomizationPane(parameter);
+            Scene customizationScene = new Scene(p);
+            Stage stage = new Stage(StageStyle.UNIFIED);
+            stage.focusedProperty().addListener((observable, oldValue, newValue) -> {
+                if (newValue) {
+                    p.initialize();
+                }
+            });
+            stage.setScene(customizationScene);
+            stage.setTitle("Customize " + name);
+            stage.setOnCloseRequest((event) -> {
+                stage.hide();
+                event.consume();
+            });
+            return stage;
+        } catch (NoSuchResourceException e) {
+            throw new RuntimeException("cannot create customizer", e);
+        }
     }
 
     @Override

@@ -1,111 +1,57 @@
 package com.github.modelflat.coursework2.core;
 
-import static java.lang.Math.abs;
-import static java.lang.Math.signum;
-
 /**
  * Created on 06.05.2017.
  */
 public class EvolvableParameter {
 
-    private double factor = 1. / 10.;
-    private Strategy strategy;
+    private EvolutionStrategy strategy;
 
-    public enum Strategy {
-        LINEAR_CYCLE, APPROACH_CYCLE
-    }
-
-    private double pointOfInterest;
-    private double granularity;
-    private boolean mode = true;
-    private boolean switchOnNextPass = false;
-    private double baseInc;
+    private boolean evolve;
 
     private double value;
     private double inc;
     private double lower;
     private double upper;
 
-    public EvolvableParameter(double value, double inc, double lower, double upper, double pointOfInterest, double granularity) {
+    private boolean dataHasChanged = false;
+
+    public EvolvableParameter() {
+    }
+
+    public EvolvableParameter(boolean evolve, EvolutionStrategy strategy,
+                              double value, double inc, double lower, double upper) {
+        this.evolve = evolve;
+
         this.value = value;
         this.inc = inc;
         this.lower = lower;
         this.upper = upper;
-        this.pointOfInterest = pointOfInterest;
-        this.granularity = granularity;
-        strategy = Strategy.APPROACH_CYCLE;
-        this.baseInc = inc;
+
+        this.strategy = strategy;
+        strategy.init(this);
     }
 
-    public EvolvableParameter(double value, double inc, double lower, double upper) {
-        this.value = value;
-        this.inc = inc;
-        this.lower = lower;
-        this.upper = upper;
-        strategy = Strategy.LINEAR_CYCLE;
+    public EvolvableParameter(boolean evolve,
+                              double value, double inc, double lower, double upper) {
+        this(evolve, new LinearEvolutionStrategy(), value, inc, lower, upper);
     }
 
-    /**
-     * upper = -lower
-     */
-    public EvolvableParameter(double value, double inc, double lower) {
-        this(value, inc, lower, -lower);
+    public EvolvableParameter(EvolutionStrategy strategy,
+                              double value, double inc, double lower, double upper) {
+        this(true, strategy, value, inc, lower, upper);
     }
 
-    public void evolve() {
-        switch (strategy) {
-            case LINEAR_CYCLE:
-                evolveLinear();
-                break;
-            case APPROACH_CYCLE:
-                evolveApproaching();
-                break;
-            default:
+    public boolean evolve() {
+        if (!evolve && !dataHasChanged) {
+            return false;
         }
-    }
-
-    private void evolveApproaching() {
-        boolean approaching =
-                (value < pointOfInterest && value + 2 * inc >= pointOfInterest) ||
-                        (value > pointOfInterest && value + 2 * inc <= pointOfInterest);
-
-        if (switchOnNextPass && approaching) {
-            mode = !mode;
-            switchOnNextPass = false;
-        } else {
-            if (mode) {
-                if (approaching) {
-                    if (abs(inc) < granularity) {
-                        factor = 1. / factor;
-                        switchOnNextPass = true;
-                    } else {
-                        inc = signum(inc) * abs(abs(value) - abs(pointOfInterest)) * factor;
-                    }
-                }
-            } else {
-                // TODO make inc restoration happen smoother
-                inc = signum(inc) * abs(abs(baseInc) - abs(inc)) * factor;
-                if (baseInc < inc) {
-                    factor = 1. / factor;
-                    inc = baseInc; // TODO fix leap
-                    mode = !mode;
-                }
-            }
+        if (dataHasChanged) {
+            strategy.init(this);
+            dataHasChanged = false;
         }
-
-        evolveLinear();
-    }
-
-    public void evolveLinear() {
-        value += inc;
-        if (value < lower) {
-            value = lower;
-            inc = -inc;
-        }
-        if (value > upper) {
-            value = upper;
-            inc = -inc;
-        }
+        value = strategy.evolve(value, lower, upper);
+        return true;
     }
 
     public double getValue() {
@@ -114,6 +60,7 @@ public class EvolvableParameter {
 
     public void setValue(double value) {
         this.value = value;
+        dataHasChanged = true;
     }
 
     public double getInc() {
@@ -122,6 +69,7 @@ public class EvolvableParameter {
 
     public void setInc(double inc) {
         this.inc = inc;
+        dataHasChanged = true;
     }
 
     public double getLower() {
@@ -130,6 +78,7 @@ public class EvolvableParameter {
 
     public void setLower(double lower) {
         this.lower = lower;
+        dataHasChanged = true;
     }
 
     public double getUpper() {
@@ -138,19 +87,38 @@ public class EvolvableParameter {
 
     public void setUpper(double upper) {
         this.upper = upper;
+        dataHasChanged = true;
+    }
+
+    public boolean evolving() {
+        return evolve;
+    }
+
+    public void setDoEvolve(boolean doEvolve) {
+        this.evolve = doEvolve;
+        dataHasChanged = true;
+    }
+
+    public void copy(EvolvableParameter parameter) {
+        this.value = parameter.value;
+        this.lower = parameter.lower;
+        this.upper = parameter.upper;
+        this.inc = parameter.inc;
+        this.strategy = parameter.strategy;
+
+        dataHasChanged = true;
     }
 
     @Override
     public String toString() {
         final StringBuffer sb = new StringBuffer("EvolvableParameter{");
         sb.append("strategy=").append(strategy);
-        sb.append(", factor=").append(factor);
-        sb.append(", pointOfInterest=").append(pointOfInterest);
-        sb.append(", granularity=").append(granularity);
+        sb.append(", evolve=").append(evolve);
         sb.append(", value=").append(value);
         sb.append(", inc=").append(inc);
         sb.append(", lower=").append(lower);
         sb.append(", upper=").append(upper);
+        sb.append(", dataHasChanged=").append(dataHasChanged);
         sb.append('}');
         return sb.toString();
     }
