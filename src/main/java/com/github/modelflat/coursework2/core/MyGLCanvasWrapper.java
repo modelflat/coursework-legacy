@@ -18,6 +18,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.IntBuffer;
+import java.util.Arrays;
 
 import static com.jogamp.opengl.GL.GL_COLOR_BUFFER_BIT;
 
@@ -281,7 +282,7 @@ public class MyGLCanvasWrapper implements GLEventListener {
             newtonKernelWrapper.setC(cReal.getValue(), cImag.getValue());
         }
 
-        if (doEvolveBounds && (minY.evolve() | maxY.evolve() | maxX.evolve() | minX.evolve())) {
+        if (minY.evolve() | maxY.evolve() | maxX.evolve() | minX.evolve()) {
             newtonKernelWrapper.setBounds(minX.getValue(), maxX.getValue(), minY.getValue(), maxY.getValue());
         }
     }
@@ -364,5 +365,41 @@ public class MyGLCanvasWrapper implements GLEventListener {
 
     public GLCanvas getCanvas() {
         return canvas;
+    }
+
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder("MyGLCanvasWrapper{");
+        sb.append("vertexData=").append(Arrays.toString(vertexData));
+        sb.append(", clContext=").append(clContext);
+        sb.append(", queue=").append(queue);
+        sb.append(", newtonKernelWrapper=").append(newtonKernelWrapper);
+        sb.append(", clearKernel=").append(clearKernel);
+        sb.append(", imageCL=").append(imageCL);
+        sb.append(", program=").append(program);
+        sb.append(", texture=").append(texture);
+        sb.append(", vertexBufferObject=").append(vertexBufferObject);
+        sb.append(", width=").append(width);
+        sb.append(", height=").append(height);
+        sb.append(", postClearProgram=").append(postClearProgram);
+        sb.append(", textureFramebuffer=").append(textureFramebuffer);
+        sb.append(", textureDrawBuffers=").append(textureDrawBuffers);
+        sb.append(", canvas=").append(canvas);
+        sb.append(", animator=").append(animator);
+        sb.append(", doEvolveBounds=").append(doEvolveBounds);
+        sb.append(", minX=").append(minX);
+        sb.append(", maxX=").append(maxX);
+        sb.append(", minY=").append(minY);
+        sb.append(", maxY=").append(maxY);
+        sb.append(", t=").append(t);
+        sb.append(", cReal=").append(cReal);
+        sb.append(", cImag=").append(cImag);
+        sb.append(", doCLClear=").append(doCLClear);
+        sb.append(", doPostCLear=").append(doPostCLear);
+        sb.append(", doWaitForCL=").append(doWaitForCL);
+        sb.append(", doEvolve=").append(doEvolve);
+        sb.append(", doRecomputeFractal=").append(doRecomputeFractal);
+        sb.append('}');
+        return sb.toString();
     }
 }

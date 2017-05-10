@@ -1,5 +1,7 @@
 package com.github.modelflat.coursework2.core;
 
+import static java.lang.Math.abs;
+
 /**
  * Created on 06.05.2017.
  */
@@ -99,6 +101,22 @@ public class EvolvableParameter {
         dataHasChanged = true;
     }
 
+    public void incValue(double increment) {
+        value += increment;
+        if (value < lower) value = lower;
+        if (value > upper) value = upper;
+        dataHasChanged = true;
+    }
+
+    /**
+     * Increments value on abs(inc) * count, i.e. inc sign is overridden from outside.
+     *
+     * @param count inc count
+     */
+    public void incValue(int count) {
+        incValue(abs(inc) * count);
+    }
+
     public void copy(EvolvableParameter parameter) {
         this.value = parameter.value;
         this.lower = parameter.lower;
@@ -111,15 +129,13 @@ public class EvolvableParameter {
 
     @Override
     public String toString() {
-        final StringBuffer sb = new StringBuffer("EvolvableParameter{");
-        sb.append("strategy=").append(strategy);
-        sb.append(", evolve=").append(evolve);
-        sb.append(", value=").append(value);
-        sb.append(", inc=").append(inc);
-        sb.append(", lower=").append(lower);
-        sb.append(", upper=").append(upper);
-        sb.append(", dataHasChanged=").append(dataHasChanged);
-        sb.append('}');
-        return sb.toString();
+        return "EvolvableParameter{" + "strategy=" + strategy +
+                ", evolve=" + evolve +
+                ", value=" + value +
+                ", inc=" + inc +
+                ", lower=" + lower +
+                ", upper=" + upper +
+                ", dataHasChanged=" + dataHasChanged +
+                '}';
     }
 }

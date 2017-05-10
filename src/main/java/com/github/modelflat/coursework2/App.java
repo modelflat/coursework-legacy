@@ -2,9 +2,9 @@ package com.github.modelflat.coursework2;
 
 import com.github.modelflat.coursework2.core.MyGLCanvasWrapper;
 import com.github.modelflat.coursework2.networking.Forismatic;
+import com.github.modelflat.coursework2.ui.MainWindowEventHandler;
 import com.github.modelflat.coursework2.util.NoSuchResourceException;
 import com.github.modelflat.coursework2.util.Util;
-import com.github.modelflat.coursework2.window.MainWindowEventHandler;
 import javafx.application.Platform;
 import javafx.embed.swing.JFXPanel;
 import javafx.scene.Group;
@@ -37,6 +37,13 @@ public class App {
         );
 
         wrapper = new MyGLCanvasWrapper(800, 600);
+        wrapper.getCanvas().addMouseWheelListener(event -> {
+            int increment = event.getWheelRotation();
+            wrapper.getMinX().incValue(increment);
+            wrapper.getMaxX().incValue(-increment);
+            wrapper.getMinY().incValue(increment);
+            wrapper.getMaxY().incValue(-increment);
+        });
         frame.add(wrapper.getCanvas());
 
         frame.addWindowListener(new MainWindowEventHandler(wrapper));

@@ -1,4 +1,4 @@
-package com.github.modelflat.coursework2.window;
+package com.github.modelflat.coursework2.ui;
 
 import com.github.modelflat.coursework2.core.MyGLCanvasWrapper;
 
@@ -30,7 +30,6 @@ public class MainWindowEventHandler implements WindowListener {
 
     @Override
     public void windowClosed(WindowEvent e) {
-
         System.out.println("window closed.");
     }
 
