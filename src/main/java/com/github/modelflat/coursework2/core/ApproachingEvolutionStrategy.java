@@ -8,8 +8,8 @@ import static java.lang.Math.signum;
  */
 public class ApproachingEvolutionStrategy implements EvolutionStrategy {
 
-    private double baseInc;
-    private double inc;
+    private double baseInc = 0.0;
+    private double inc = 0.0;
 
     private double pointOfInterest;
     private double factor = 1. / 10.;
@@ -28,7 +28,11 @@ public class ApproachingEvolutionStrategy implements EvolutionStrategy {
 
     @Override
     public void init(EvolvableParameter parameter) {
-        inc = baseInc = parameter.getInc();
+        double t = parameter.getInc();
+        if (inc == baseInc) {
+            inc = baseInc = t;
+        }
+        baseInc = t;
     }
 
     @Override
