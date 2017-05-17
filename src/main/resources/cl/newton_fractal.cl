@@ -7,6 +7,8 @@
     #define PRECISION 1e-4
 #endif
 
+#define DYNAMIC_COLOR 0
+
 // Draws newton fractal
 // seed - seed value for pRNG; see "random.clh"
 kernel void newton_fractal(
@@ -22,7 +24,11 @@ kernel void newton_fractal(
     // const C
     const real2 C = {C_const[0], C_const[1]};
     // color
-    float4 color = {fabs(sin(PI * t / 3.)), fabs(cos(PI * t / 3.)), 0.0, 0.0};
+    #if (DYNAMIC_COLOR)
+        float4 color = {fabs(sin(PI * t / 3.)), fabs(cos(PI * t / 3.)), 0.0, 0.0};
+    #else
+        float4 color = {1.0, 1.0, 1.0, 1.0};
+    #endif
     // initialize pRNG
     uint2 rng_state;
     init_state(seed, &rng_state);
@@ -49,7 +55,9 @@ kernel void newton_fractal(
         uint is = iter_skip;
         int frozen = 0;
 
-        color.w = color_alpha_increment;
+        #if (DYNAMIC_COLOR)
+            color.w = color_alpha_increment;
+        #endif
 
         // iterate through solutions of cubic equation
         for (int i = 0; i < points_count; ++i) {
@@ -66,12 +74,15 @@ kernel void newton_fractal(
                 coord.y = image_height - 1 - (int)((starting_point.y - min_y) / scale_y);
 
                 // draw next point:
-                color.w += color_alpha_increment;
+                #if (DYNAMIC_COLOR)
+                    color.w += color_alpha_increment;
+                #endif
                 if (coord.x < image_width && coord.y < image_height && coord.x >= 0 && coord.y >= 0) {
                     write_imagef(out_image, coord, color);
                     frozen = 0;
                 } else {
                     if (++frozen > 15) {
+                        // this generally means that solution is going to approach infinity
                         //printf("[OCL] error at slave %d: frozen!\n", get_global_id(0));
                         break;
                     }

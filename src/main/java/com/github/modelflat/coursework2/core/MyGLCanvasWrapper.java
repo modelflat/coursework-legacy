@@ -1,7 +1,9 @@
 package com.github.modelflat.coursework2.core;
 
+import com.github.modelflat.coursework2.BoxCountingCalculator;
 import com.github.modelflat.coursework2.util.GLUtil;
 import com.github.modelflat.coursework2.util.NoSuchResourceException;
+import com.github.modelflat.coursework2.util.Util;
 import com.jogamp.opencl.*;
 import com.jogamp.opencl.gl.CLGLContext;
 import com.jogamp.opencl.gl.CLGLImage2d;
@@ -14,13 +16,14 @@ import com.jogamp.opengl.util.FPSAnimator;
 import com.jogamp.opengl.util.GLBuffers;
 import com.jogamp.opengl.util.texture.Texture;
 
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.nio.IntBuffer;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Date;
 
 import static com.jogamp.opengl.GL.GL_COLOR_BUFFER_BIT;
+import static java.lang.Math.log;
 
 /**
  * Created on 18.03.2017.
@@ -73,8 +76,8 @@ public class MyGLCanvasWrapper implements GLEventListener {
     private EvolvableParameter minY = new EvolvableParameter(false, -1, 0.01, -1.0, 0.0);
     private EvolvableParameter maxY = new EvolvableParameter(false, 1, -0.01, -0.0, 1.0);
 
-    private EvolvableParameter t = new EvolvableParameter(new ApproachingEvolutionStrategy(),
-            -1.0, .02, -1.0, 1.0);
+    private EvolvableParameter t = new EvolvableParameter(true,//new ApproachingEvolutionStrategy(),
+            -1.0, .01, -1.0, 1.0);
     private EvolvableParameter cReal = new EvolvableParameter(false, .5, -.05, -1.0, 1.0);
     private EvolvableParameter cImag = new EvolvableParameter(false, -.5, .05, -1.0, 1.0);
 
@@ -83,6 +86,11 @@ public class MyGLCanvasWrapper implements GLEventListener {
     private boolean doWaitForCL = true;
     private boolean doEvolve = true;
     private boolean doRecomputeFractal = true;
+
+    private CLKernel computeKernel;
+
+    private boolean doComputeD = false;
+    private CLBuffer<IntBuffer> count;
 
     public MyGLCanvasWrapper(int width, int height) {
         this.width = width;
@@ -177,6 +185,14 @@ public class MyGLCanvasWrapper implements GLEventListener {
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+        try {
+            computeKernel = clContext.createProgram(Util.loadSourceFile("cl/compute_non_transparent.cl"))
+                    .build().createCLKernel("compute");
+        } catch (NoSuchResourceException e) {
+            e.printStackTrace();
+        }
+
     }
 
     @Override
@@ -210,13 +226,26 @@ public class MyGLCanvasWrapper implements GLEventListener {
 
         clearKernel.setArg(0, imageCL);
 
+        computeKernel.setArg(0, imageCL);
+
         drawable.setAutoSwapBufferMode(true);
+
+        // logfile for D
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
+        try {
+            logFile = new PrintStream("t.d-log" + format.format(new Date()) + ".txt");
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
     }
+
+    private PrintStream logFile;
 
     @Override
     public void dispose(GLAutoDrawable drawable) {
         System.out.println("disposing...");
         clContext.release();
+        logFile.close();
     }
 
     @Override
@@ -251,6 +280,12 @@ public class MyGLCanvasWrapper implements GLEventListener {
             if (doEvolve) {
                 evolve();
             }
+        }
+
+        if (doComputeD) {
+            // TODO move such things to UI
+            // System.out.println(t.getValue() + "\t" + computeD());
+            logFile.println(t.getValue() + "\t" + computeD());
         }
 
         gl.glClear(GL_COLOR_BUFFER_BIT);
@@ -365,6 +400,46 @@ public class MyGLCanvasWrapper implements GLEventListener {
 
     public GLCanvas getCanvas() {
         return canvas;
+    }
+
+    public boolean doComputeD() {
+        return doComputeD;
+    }
+
+    public void setDoComputeD(boolean doComputeD) {
+        this.doComputeD = doComputeD;
+    }
+
+    public int computeActiveBoxes(int boxSize) {
+        computeKernel.setArg(1, boxSize);
+        if (count == null) {
+            count = clContext.createIntBuffer(1, CLMemory.Mem.READ_WRITE);
+        }
+        count.getBuffer().put(0, 0);
+        computeKernel.setArg(2, count);
+        queue.putWriteBuffer(count, true)
+                .put2DRangeKernel(
+                        computeKernel, 0, 0, width, height, 0, 0);
+        queue.finish().putReadBuffer(count, true);
+        return count.getBuffer().get(0);
+    }
+
+    public double computeD() {
+        int startBoxSize = 5;
+        int endBoxSize = width / 16;
+        double[][] boxes = new double[2][endBoxSize - startBoxSize];
+        // for all box sizes from 2 to maxXSize
+        for (int k = startBoxSize, bI = 0; k < endBoxSize; k++, bI++) {
+            int sizeY = (height / k) + (height % k == 0 ? 0 : 1);
+            int sizeX = (width / k) + (width % k == 0 ? 0 : 1);
+            int totalBoxes = sizeX * sizeY;
+            int activeBoxes = computeActiveBoxes(k);
+            //System.out.println(String.format("%d / %d", activeBoxes, totalBoxes));
+            boxes[0][bI] = log(1.0 / k);
+            boxes[1][bI] = log(activeBoxes);
+            // System.out.println(String.format("[%d] (%d) %f %f", bI, k, Math.log(1.0 / k), Math.log(activeBoxes)));
+        }
+        return BoxCountingCalculator.normalEquations2d(boxes[0], boxes[1])[0];
     }
 
     @Override

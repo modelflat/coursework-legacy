@@ -4,8 +4,8 @@ import javafx.fxml.FXMLLoader;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.net.URL;
 
 /**
  * Created on 06.05.2017.
@@ -14,14 +14,14 @@ public class Util {
 
     public static void loadCustomControl(String name, Object controlObj) throws NoSuchResourceException {
         try {
-            URL resourceUrl = FXMLLoader.getDefaultClassLoader().getResource(name);
-            if (resourceUrl == null) {
+            InputStream is = FXMLLoader.getDefaultClassLoader().getResourceAsStream(name);
+            if (is == null) {
                 throw new NoSuchResourceException(name);
             }
-            FXMLLoader loader = new FXMLLoader(resourceUrl);
+            FXMLLoader loader = new FXMLLoader();
             loader.setRoot(controlObj);
             loader.setController(controlObj);
-            loader.load();
+            loader.load(is);
         } catch (IOException e) {
             throw new NoSuchResourceException(e);
         }
@@ -29,11 +29,11 @@ public class Util {
 
     public static Object loadFXML(String name) throws NoSuchResourceException {
         try {
-            URL resourceUrl = FXMLLoader.getDefaultClassLoader().getResource(name);
-            if (resourceUrl == null) {
+            InputStream is = FXMLLoader.getDefaultClassLoader().getResourceAsStream(name);
+            if (is == null) {
                 throw new NoSuchResourceException(name);
             }
-            return FXMLLoader.load(resourceUrl);
+            return new FXMLLoader().load(is);
         } catch (IOException e) {
             throw new NoSuchResourceException(e);
         }

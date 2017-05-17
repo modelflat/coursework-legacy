@@ -1,15 +1,10 @@
 package com.github.modelflat.coursework2;
 
 import javafx.scene.image.Image;
-import javafx.scene.image.PixelFormat;
 import javafx.scene.image.PixelReader;
 import javafx.scene.paint.Color;
-import javafx.util.Pair;
 
 import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.function.Function;
 
 /**
@@ -17,7 +12,7 @@ import java.util.function.Function;
  */
 public class BoxCountingCalculator {
 
-    public static final int DEFAULT_MIN_BOX_SIZE = 5;
+    public static final int DEFAULT_MIN_BOX_SIZE = 1;
 
     private Image image;
     private int startBoxSize;
@@ -60,7 +55,7 @@ public class BoxCountingCalculator {
         int w = (int) image.getWidth();
         int h = (int) image.getHeight();
         ByteBuffer boxBuffer = null;
-        for (int k = startBoxSize, bI = 0; k < endBoxSize; k++, bI++) {
+        for (int k = startBoxSize, bI = 0; k < image.getWidth() / 32; k++, bI++) {
             int sizeY = (h / k) + (h % k == 0 ? 0 : 1);
             int sizeX = (w / k) + (w % k == 0 ? 0 : 1);
             int totalBoxes = sizeX * sizeY;
@@ -94,14 +89,7 @@ public class BoxCountingCalculator {
         return boxes;
     }
 
-    /**
-     * not optimized and generally bad, but takes <0.2ms to compute. compared to calculateBoxes it's perfectly
-     * fine.
-     * @param x
-     * @param y
-     * @return
-     */
-    private static double[] normalEquations2d(double[] x, double[] y) {
+    public static double[] normalEquations2d(double[] x, double[] y) {
         //x^t * x
         double[][] xtx = new double[2][2];
         for (double aX : x) {
