@@ -12,11 +12,23 @@ public class ApproachingEvolutionStrategy implements EvolutionStrategy {
     private double inc = 0.0;
 
     private double pointOfInterest;
-    private double factor = 1. / 10.;
+    private double factor = 1. / 100.;
     private double granularity = 1e-12;
 
     private boolean mode = true;
     private boolean switchOnNextPass = false;
+    private boolean stopped = false;
+
+    private InternalStrategy strategy;
+
+    public ApproachingEvolutionStrategy(double pointOfInterest) {
+        this(InternalStrategy.CYCLE, pointOfInterest);
+    }
+
+    public ApproachingEvolutionStrategy(InternalStrategy strategy, double pointOfInterest) {
+        this.strategy = strategy;
+        this.pointOfInterest = pointOfInterest;
+    }
 
     public void setPointOfInterest(double v) {
         pointOfInterest = v;
@@ -37,6 +49,10 @@ public class ApproachingEvolutionStrategy implements EvolutionStrategy {
 
     @Override
     public double evolve(double value, double lower, double upper) {
+        if (stopped) {
+            return value;
+        }
+
         boolean approaching =
                 (value < pointOfInterest && value + 2 * inc >= pointOfInterest) ||
                         (value > pointOfInterest && value + 2 * inc <= pointOfInterest);
@@ -54,15 +70,24 @@ public class ApproachingEvolutionStrategy implements EvolutionStrategy {
                     }
                 }
             } else {
-                // TODO make inc restoration happen smoother
-                inc = signum(inc) * abs(abs(baseInc) - abs(inc)) * factor;
-                if (baseInc < inc) {
-                    factor = 1. / factor;
-                    inc = baseInc; // TODO fix leap
-                    mode = !mode;
+                switch (strategy) {
+                    case CYCLE:
+                        // TODO make inc restoration happen smoother
+                        inc = signum(inc) * abs(abs(baseInc) - abs(inc)) * factor;
+                        if (baseInc < inc) {
+                            factor = 1. / factor;
+                            inc = baseInc; // TODO fix leap
+                            mode = !mode;
+                        }
+                        break;
+                    case STOP_AT_POINT_OF_INTEREST:
+                        stopped = true;
+                    default:
+                        // do nothing
                 }
             }
         }
+
 
         value += inc;
         if (value < lower) {
@@ -76,4 +101,6 @@ public class ApproachingEvolutionStrategy implements EvolutionStrategy {
 
         return value;
     }
+
+    public enum InternalStrategy {STOP_AT_POINT_OF_INTEREST, CYCLE}
 }

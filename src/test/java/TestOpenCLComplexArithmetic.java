@@ -19,14 +19,12 @@ import static org.testng.Assert.assertEquals;
 
 public class TestOpenCLComplexArithmetic {
 
+    private static final int CL_PLATFORM_IDX = 1;
+    private static final int DATA_SIZE = 10000;
+    private static float D;
     private CLContext context;
     private CLCommandQueue queue;
     private CLDevice device;
-
-    private static final int CL_PLATFORM_IDX = 1;
-
-    private static float D;
-    private static final int DATA_SIZE = 10000;
 
     @BeforeClass
     public void beforeClass() {
@@ -269,13 +267,13 @@ public class TestOpenCLComplexArithmetic {
                     Complex.ZERO,
                     result[0][2 * i + 1]
             );
-            eq.setPrecision(1e-7);
+            //eq.setPrecision(1e-7);
             boolean cannotBeSolved = false;
             try {
                 eq.solve(roots);
             } catch (ComplexCubicEquation.SolutionException e) {
                 cannotBeSolved = true;
-                System.out.println(eq + " cannot be solved with precision 1e-7!");
+                System.out.printf(eq + " cannot be solved with precision %f!", eq.getPrecision());
             }
             boolean passed = cannotBeSolved ||
                     Complex.equals(roots[0], result[1][3 * i], D)

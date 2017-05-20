@@ -25,6 +25,15 @@ public class App {
 
     private MyGLCanvasWrapper wrapper;
 
+    public static App getInstance() {
+        return instance;
+    }
+
+    public static void main(String[] args) {
+        instance = new App();
+        SwingUtilities.invokeLater(() -> instance.initAndShowGUI());
+    }
+
     private void initAndShowGUI() {
         JFrame frame = new JFrame(defaultWindowName);
 
@@ -36,7 +45,7 @@ public class App {
                 new BoxLayout(frame.getContentPane(), BoxLayout.X_AXIS)
         );
 
-        wrapper = new MyGLCanvasWrapper(800, 600);
+        wrapper = new MyGLCanvasWrapper(512, 512);
         wrapper.getCanvas().addMouseWheelListener(event -> {
             int increment = event.getWheelRotation();
             wrapper.getMinX().incValue(increment);
@@ -72,15 +81,6 @@ public class App {
 
     public MyGLCanvasWrapper getWrapper() {
         return wrapper;
-    }
-
-    public static App getInstance() {
-        return instance;
-    }
-
-    public static void main(String[] args) {
-        instance = new App();
-        SwingUtilities.invokeLater(() -> instance.initAndShowGUI());
     }
 
 }

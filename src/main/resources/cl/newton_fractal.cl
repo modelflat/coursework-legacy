@@ -2,7 +2,7 @@
 #include "random.clh"
 
 #ifdef cl_khr_fp64
-    #define PRECISION 1e-8
+    #define PRECISION 1e-9
 #else
     #define PRECISION 1e-4
 #endif
@@ -10,15 +10,20 @@
 #define DYNAMIC_COLOR 0
 
 // Draws newton fractal
-// seed - seed value for pRNG; see "random.clh"
 kernel void newton_fractal(
+    // plane bounds
     real min_x, real max_x, real min_y, real max_y,
-    global real* C_const,
-    real t,
+    // fractal parameters
+    global real* C_const, real t,
+    // how many initial points select
     uint runs_count,
+    // how many times solve equation for certain initial point
     uint points_count,
+    // how many initial steps will be skipped
     uint iter_skip,
+    // seed - seed value for pRNG; see "random.clh"
     ulong seed,
+    // image buffer for output
     write_only image2d_t out_image)
 {
     // const C
@@ -49,8 +54,8 @@ kernel void newton_fractal(
     for (int run = 0; run < runs_count; ++run) {
         // choose starting point
         real2 starting_point = {
-            (random(&rng_state)) * span_x + min_x,
-            (random(&rng_state)) * span_y + min_y
+            (random(&rng_state)) * span_x /2.0 + min_x,
+            (random(&rng_state)) * span_y /2.0 + min_y
         };
         uint is = iter_skip;
         int frozen = 0;
@@ -64,7 +69,7 @@ kernel void newton_fractal(
             // compute next point:
             a = starting_point * a_modifier;
             uint root_number = as_uint(random(&rng_state)) % 3;
-            solve_cubic_newton_fractal_optimized(a, c, 1e-8, root_number, &roots);
+            solve_cubic_newton_fractal_optimized(a, c, 1e-8, root_number, roots);
             starting_point = roots[root_number];
 
             // the first iter_skip points will  be skipped

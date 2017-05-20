@@ -27,14 +27,14 @@
         return result;
     }
 
-    void csqrt(real2 a, real2* roots) {
+    void csqrt(real2 a, real2 roots[]) {
         roots[0].x = sqrt((  a.x + length(a)) / 2);
         roots[0].y = sign(a.y) * sqrt(( -a.x + length(a)) / 2);
         roots[1].x = -roots[0].x;
         roots[1].y = -roots[0].y;
     }
 
-    void ccbrt(real2 a, real2* roots) {
+    void ccbrt(real2 a, real2 roots[]) {
         real cbrt_abs_a = cbrt(length(a));
         real phi = atan2(a.y, a.x) / 3.0;
         real temp = 0;
@@ -76,13 +76,13 @@
             -q.y / 2 - first_root_of_D.y
         };
         real2 alpha[3];
-        ccbrt(base_alpha, &alpha);
+        ccbrt(base_alpha, alpha);
         real2 base_beta = {
             -q.x / 2 + first_root_of_D.x,
             -q.y / 2 + first_root_of_D.y
         };
         real2 beta[3];
-        ccbrt(base_beta, &beta);
+        ccbrt(base_beta, beta);
         // now we have alpha & beta values, lets combine them such as:
         // alpha[0]*beta[i] = -p / 3;
         int idx = -1;
@@ -160,9 +160,9 @@
 
         // ====================
         real2 alpha[3];
-        ccbrt(base_alpha, &alpha);
+        ccbrt(base_alpha, alpha);
         real2 beta[3];
-        ccbrt(base_beta, &beta);
+        ccbrt(base_beta, beta);
         // now we have alpha & beta values, lets combine them such as:
         // alpha[0]*beta[i] = -p / 3;
         int idx = -1;

@@ -16,12 +16,14 @@ import com.jogamp.opengl.util.FPSAnimator;
 import com.jogamp.opengl.util.GLBuffers;
 import com.jogamp.opengl.util.texture.Texture;
 
-import java.io.*;
+import java.io.FileNotFoundException;
+import java.io.PrintStream;
 import java.nio.IntBuffer;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
 
+import static com.jogamp.opencl.CLProgram.define;
 import static com.jogamp.opengl.GL.GL_COLOR_BUFFER_BIT;
 import static java.lang.Math.log;
 
@@ -71,13 +73,15 @@ public class MyGLCanvasWrapper implements GLEventListener {
 
     private boolean doEvolveBounds = false;
 
-    private EvolvableParameter minX = new EvolvableParameter(false, -1, 0.01, -1.0, 0.0);
-    private EvolvableParameter maxX = new EvolvableParameter(false, 1, -0.01, 0.0, 1.0);
-    private EvolvableParameter minY = new EvolvableParameter(false, -1, 0.01, -1.0, 0.0);
-    private EvolvableParameter maxY = new EvolvableParameter(false, 1, -0.01, -0.0, 1.0);
+    private EvolvableParameter minX = new EvolvableParameter(false, -1, 0.0, -1.0, 0.0);
+    private EvolvableParameter maxX = new EvolvableParameter(false, 1, -0.0, 0.0, 1.0);
+    private EvolvableParameter minY = new EvolvableParameter(false, -1, 0.0, -1.0, 0.0);
+    private EvolvableParameter maxY = new EvolvableParameter(false, 1, -0.0, -0.0, 1.0);
 
-    private EvolvableParameter t = new EvolvableParameter(true,//new ApproachingEvolutionStrategy(),
-            -1.0, .01, -1.0, 1.0);
+    private EvolvableParameter t = new EvolvableParameter(true,
+            new ApproachingEvolutionStrategy(
+                    ApproachingEvolutionStrategy.InternalStrategy.STOP_AT_POINT_OF_INTEREST, 0.0),
+            10.0, -.01, -1.0, 10.0);
     private EvolvableParameter cReal = new EvolvableParameter(false, .5, -.05, -1.0, 1.0);
     private EvolvableParameter cImag = new EvolvableParameter(false, -.5, .05, -1.0, 1.0);
 
@@ -87,10 +91,15 @@ public class MyGLCanvasWrapper implements GLEventListener {
     private boolean doEvolve = true;
     private boolean doRecomputeFractal = true;
 
+    private boolean autoscale = true;
+    private CLKernel boundingBoxKernel;
+    private CLBuffer<IntBuffer> boundingBoxBuffer;
+
     private CLKernel computeKernel;
 
-    private boolean doComputeD = false;
+    private boolean doComputeD = true;
     private CLBuffer<IntBuffer> count;
+    private PrintStream logFile;
 
     public MyGLCanvasWrapper(int width, int height) {
         this.width = width;
@@ -101,7 +110,7 @@ public class MyGLCanvasWrapper implements GLEventListener {
         canvas.addGLEventListener(this);
         canvas.setSize(width, height);
 
-        animator = new FPSAnimator(60, true);
+        animator = new FPSAnimator(60, false);
         animator.add(canvas);
     }
 
@@ -159,10 +168,10 @@ public class MyGLCanvasWrapper implements GLEventListener {
         gl.glClearColor(0.2f, 0.0f, 0.0f, 1.0f);
     }
 
-    private void initCLSide(GLContext context) {
+    private void initCLSide(GLContext context) throws NoSuchResourceException {
         CLPlatform chosenPlatform = CLPlatform.getDefault();
-        System.out.println(chosenPlatform);
         CLDevice chosenDevice = GLUtil.findGLCompatibleDevice(chosenPlatform);
+
         if (chosenDevice == null) {
             throw new RuntimeException(String.format("no device supporting GL sharing on platform %s!",
                     chosenPlatform.toString()));
@@ -171,36 +180,33 @@ public class MyGLCanvasWrapper implements GLEventListener {
         clContext = CLGLContext.create(context, chosenDevice);
         queue = chosenDevice.createCommandQueue();
 
-        try (InputStream is = new FileInputStream("./src/main/resources/cl/newton_fractal.cl")) {
-            newtonKernelWrapper = new NewtonKernelWrapper(
-                    clContext,
-                    clContext.createProgram(is).build("-I ./src/main/resources/cl/include -cl-no-signed-zeros")
-                            .createCLKernel("newton_fractal"));
-        } catch (IOException e) {
-            e.printStackTrace(); //TODO
-        }
-
-        try (InputStream is = new FileInputStream("./src/main/resources/cl/clear_kernel.cl")) {
-            clearKernel = clContext.createProgram(is).build().createCLKernel("clear");
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        try {
-            computeKernel = clContext.createProgram(Util.loadSourceFile("cl/compute_non_transparent.cl"))
-                    .build().createCLKernel("compute");
-        } catch (NoSuchResourceException e) {
-            e.printStackTrace();
-        }
-
+        newtonKernelWrapper = new NewtonKernelWrapper(
+                clContext,
+                clContext.createProgram(Util.loadSourceFile("cl/newton_fractal.cl"))
+                        .build(
+                                "-I ./src/main/resources/cl/include -cl-no-signed-zeros -Werror")
+                        .createCLKernel("newton_fractal")
+        );
+        clearKernel = clContext.createProgram(Util.loadSourceFile("cl/clear_kernel.cl"))
+                .build()
+                .createCLKernel("clear");
+        computeKernel = clContext.createProgram(Util.loadSourceFile("cl/compute_non_transparent.cl"))
+                .build()
+                .createCLKernel("compute");
+        boundingBoxKernel = clContext.createProgram(Util.loadSourceFile("cl/compute_bounding_box.cl"))
+                .build(define("WIDTH", width),
+                        define("HEIGHT", height)).createCLKernel("compute_bounding_box");
     }
 
     @Override
     public void init(GLAutoDrawable drawable) {
         // perform CL initialization
         GLContext context = drawable.getContext();
-
-        initCLSide(context);
+        try {
+            initCLSide(context);
+        } catch (NoSuchResourceException e) {
+            e.printStackTrace();
+        }
 
         // perform GL initialization
         GL4 gl = drawable.getGL().getGL4();
@@ -221,31 +227,28 @@ public class MyGLCanvasWrapper implements GLEventListener {
         newtonKernelWrapper.setBounds(minX.getValue(), maxX.getValue(), minY.getValue(), maxY.getValue());
         newtonKernelWrapper.setC(cReal.getValue(), cImag.getValue());
         newtonKernelWrapper.setT(t.getValue());
-        newtonKernelWrapper.setRunParams(64, 4, 150, 3);
+        newtonKernelWrapper.setRunParams(64, 4, 1000, 3);
         newtonKernelWrapper.setImage(imageCL);
 
         clearKernel.setArg(0, imageCL);
 
         computeKernel.setArg(0, imageCL);
 
+        boundingBoxKernel.setArg(0, imageCL);
+
+        boundingBoxBuffer = clContext.createIntBuffer(4, CLMemory.Mem.WRITE_ONLY);
+        boundingBoxKernel.setArg(1, boundingBoxBuffer);
+
         drawable.setAutoSwapBufferMode(true);
-
-        // logfile for D
-        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
-        try {
-            logFile = new PrintStream("t.d-log" + format.format(new Date()) + ".txt");
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
     }
-
-    private PrintStream logFile;
 
     @Override
     public void dispose(GLAutoDrawable drawable) {
         System.out.println("disposing...");
         clContext.release();
-        logFile.close();
+        if (logFile != null) {
+            logFile.close();
+        }
     }
 
     @Override
@@ -284,8 +287,35 @@ public class MyGLCanvasWrapper implements GLEventListener {
 
         if (doComputeD) {
             // TODO move such things to UI
-            // System.out.println(t.getValue() + "\t" + computeD());
-            logFile.println(t.getValue() + "\t" + computeD());
+            System.out.println(t.getValue() + "\t" + computeD());
+            if (logFile == null) {
+                SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
+                try {
+                    logFile = new PrintStream("t-d@" + format.format(new Date()) + ".log");
+                } catch (FileNotFoundException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (autoscale) { // TODO remove this dependency on autoscaling
+                logFile.println(t.getValue() + "\t" + computeD());
+            }
+        }
+
+        if (autoscale && doEvolve) {
+            if (Math.abs(t.getValue()) < 1e-12) {
+                System.out.println("autoscale stopped");
+                autoscale = false;
+            }
+            // + 1) compute bounding box
+            // - 2) save previous bounds to history (optional)
+            // + 3) change bounds corresponding to computed box
+            boundingBoxBuffer.getBuffer().put(0).put(width - 1).put(0).put(height - 1).rewind();
+            queue.putWriteBuffer(boundingBoxBuffer, true)
+                    .put1DRangeKernel(boundingBoxKernel,
+                            0, 4, 0)
+                    .finish()
+                    .putReadBuffer(boundingBoxBuffer, true);
+            boxToBounds(boundingBoxBuffer.getBuffer());
         }
 
         gl.glClear(GL_COLOR_BUFFER_BIT);
@@ -306,6 +336,38 @@ public class MyGLCanvasWrapper implements GLEventListener {
     @Override
     public void reshape(GLAutoDrawable drawable, int x, int y, int width, int height) {
         drawable.getGL().getGL4().glViewport(x, y, width, height);
+    }
+
+    private void boxToBounds(IntBuffer box) {
+        double sX = maxX.getValue() - minX.getValue();
+        double sY = maxY.getValue() - minY.getValue();
+
+        int padding = 2;
+
+        int dxMin = box.get(0) - padding;
+        int dxMax = box.get(1) + padding;
+        int dyMin = box.get(3) + padding;
+        int dyMax = box.get(2) - padding;
+
+        double newMinX = dxMin <= 0 ?
+                minX.getValue() :
+                minX.getValue() + ((double) dxMin / width) * sX;
+        double newMaxX = dxMax >= width - 1 ?
+                maxX.getValue() :
+                maxX.getValue() - (1 - (double) dxMax / width) * sX;
+        double newMinY = dyMin >= height - 1 ?
+                minY.getValue() :
+                minY.getValue() + (1 - (double) dyMin / height) * sY;
+        double newMaxY = dyMax <= 0 ?
+                maxY.getValue() :
+                maxY.getValue() - ((double) dyMax / height) * sY;
+
+        newtonKernelWrapper.setBounds(newMinX, newMaxX, newMinY, newMaxY);
+
+        minX.setValue(newMinX);
+        maxX.setValue(newMaxX);
+        minY.setValue(newMinY);
+        maxY.setValue(newMaxY);
     }
 
     private void evolve() {
