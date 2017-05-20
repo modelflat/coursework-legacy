@@ -20,12 +20,12 @@ import java.io.FileNotFoundException;
 import java.io.PrintStream;
 import java.nio.IntBuffer;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
 import java.util.Date;
 
 import static com.jogamp.opencl.CLProgram.define;
 import static com.jogamp.opengl.GL.GL_COLOR_BUFFER_BIT;
 import static java.lang.Math.log;
+import static java.lang.System.nanoTime;
 
 /**
  * Created on 18.03.2017.
@@ -35,7 +35,8 @@ public class MyGLCanvasWrapper implements GLEventListener {
     private static final String vertexShader = "glsl/textureRender.vert";
     private static final String fragmentShader = "glsl/textureRender.frag";
     private static final String fragmentClearShader = "glsl/textureRenderStatisticalClear.frag";
-
+    private static boolean profile = true;
+    private static long MAX_TIME = 1_000_000_000 / 30; // 30 fps
     private float[] vertexData = new float[]{
             // texture vertex coords: x, y
             1.0f, 1.0f,
@@ -48,91 +49,198 @@ public class MyGLCanvasWrapper implements GLEventListener {
             0.f, 0.f,
             0.f, 1.f,
     };
-
     private CLGLContext clContext;
     private CLCommandQueue queue;
-
-    private NewtonKernelWrapper newtonKernelWrapper;
-
+    private NewtonKernelWrapper newtonKernelWrapper = new NewtonKernelWrapper();
     private CLKernel clearKernel;
     private CLGLImage2d<IntBuffer> imageCL;
-
     private int program;
     private Texture texture;
     private int vertexBufferObject;
-
     private int width;
     private int height;
-
     private int postClearProgram;
-    private int textureFramebuffer;
-    private IntBuffer textureDrawBuffers;
-
     private GLCanvas canvas;
-    private FPSAnimator animator;
-
     private boolean doEvolveBounds = false;
-
-    private EvolvableParameter minX = new EvolvableParameter(false, -1, 0.0, -1.0, 0.0);
-    private EvolvableParameter maxX = new EvolvableParameter(false, 1, -0.0, 0.0, 1.0);
-    private EvolvableParameter minY = new EvolvableParameter(false, -1, 0.0, -1.0, 0.0);
-    private EvolvableParameter maxY = new EvolvableParameter(false, 1, -0.0, -0.0, 1.0);
-
+    private EvolvableParameter minX = new EvolvableParameter(false, -1, 0.0, -10.0, 0.0);
+    private EvolvableParameter maxX = new EvolvableParameter(false, 1, -0.0, 0.0, 10.0);
+    private EvolvableParameter minY = new EvolvableParameter(false, -1, 0.0, -10.0, 0.0);
+    private EvolvableParameter maxY = new EvolvableParameter(false, 1, -0.0, -0.0, 10.0);
     private EvolvableParameter t = new EvolvableParameter(true,
             new ApproachingEvolutionStrategy(
                     ApproachingEvolutionStrategy.InternalStrategy.STOP_AT_POINT_OF_INTEREST, 0.0),
-            10.0, -.01, -1.0, 10.0);
+            3.4, -.01, -1.0, 10.0);
     private EvolvableParameter cReal = new EvolvableParameter(false, .5, -.05, -1.0, 1.0);
     private EvolvableParameter cImag = new EvolvableParameter(false, -.5, .05, -1.0, 1.0);
-
     private boolean doCLClear = true;
     private boolean doPostCLear = true;
     private boolean doWaitForCL = true;
     private boolean doEvolve = true;
     private boolean doRecomputeFractal = true;
-
-    private boolean autoscale = true;
+    private boolean autoscale = false;
     private CLKernel boundingBoxKernel;
     private CLBuffer<IntBuffer> boundingBoxBuffer;
-
     private CLKernel computeKernel;
-
-    private boolean doComputeD = true;
+    private boolean doComputeD = false;
     private CLBuffer<IntBuffer> count;
     private PrintStream logFile;
 
-    public MyGLCanvasWrapper(int width, int height) {
+    public MyGLCanvasWrapper(FPSAnimator animator, int width, int height, int canvasWidth, int canvasHeight) {
         this.width = width;
         this.height = height;
 
         canvas = new GLCanvas();
 
         canvas.addGLEventListener(this);
-        canvas.setSize(width, height);
-
-        animator = new FPSAnimator(60, false);
+        canvas.setSize(canvasWidth, canvasHeight);//width, height);
         animator.add(canvas);
     }
 
-    public FPSAnimator getAnimator() {
-        return animator;
+    @Override
+    public void init(GLAutoDrawable drawable) {
+        // perform CL initialization
+        GLContext context = drawable.getContext();
+        try {
+            initCLSide(context);
+        } catch (NoSuchResourceException e) {
+            e.printStackTrace();
+        }
+
+        // perform GL initialization
+        GL4 gl = drawable.getGL().getGL4();
+        IntBuffer buffer = GLBuffers.newDirectIntBuffer(width * height);
+        try {
+            initGLSide(gl, buffer);
+        } catch (NoSuchResourceException e) {
+            e.printStackTrace(); // TODO decide what to do
+        }
+
+        // interop
+        imageCL = clContext.createFromGLTexture2d(
+                buffer,
+                texture.getTarget(), texture.getTextureObject(),
+                0, CLMemory.Mem.WRITE_ONLY);
+
+        // kernels
+        newtonKernelWrapper.setBounds(minX.getValue(), maxX.getValue(), minY.getValue(), maxY.getValue());
+        newtonKernelWrapper.setC(cReal.getValue(), cImag.getValue());
+        newtonKernelWrapper.setT(t.getValue());
+        newtonKernelWrapper.setImage(imageCL);
+
+        clearKernel.setArg(0, imageCL);
+
+        computeKernel.setArg(0, imageCL);
+
+        boundingBoxKernel.setArg(0, imageCL);
+        boundingBoxBuffer = clContext.createIntBuffer(4, CLMemory.Mem.WRITE_ONLY);
+        boundingBoxKernel.setArg(1, boundingBoxBuffer);
+
+        drawable.setAutoSwapBufferMode(true);
     }
+
+    @Override
+    public void dispose(GLAutoDrawable drawable) {
+        clContext.release();
+        if (logFile != null) {
+            logFile.close();
+        }
+    }
+
+    @Override
+    public void display(GLAutoDrawable drawable) {
+        GL4 gl = drawable.getGL().getGL4();
+
+        long tt = 0, dd = 0, cd = 0, ev = 0, as = 0, pw = 0;
+        if (doRecomputeFractal) {
+            queue.putAcquireGLObject(imageCL);
+
+            tt = nanoTime();
+            if (doCLClear) {
+                queue.put2DRangeKernel(clearKernel,
+                        0, 0,
+                        width, height, 0, 0)
+                //.finish()
+                ;
+            }
+            tt = (nanoTime() - tt);
+
+            dd = nanoTime();
+            newtonKernelWrapper.runOn(queue);
+            queue.putReleaseGLObject(imageCL);
+            dd = (nanoTime() - dd);
+
+            pw = nanoTime();
+            if (doWaitForCL) {
+                queue.finish();
+            }
+            pw = nanoTime() - pw;
+
+            cd = nanoTime();
+            if (doComputeD) {
+                // TODO move such things to UI
+                System.out.println(t.getValue() + "\t" + computeD());
+                if (logFile == null) {
+                    SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
+                    try {
+                        logFile = new PrintStream("t-d@" + format.format(new Date()) + ".log");
+                    } catch (FileNotFoundException e) {
+                        e.printStackTrace();
+                    }
+                }
+                if (autoscale) { // TODO remove this dependency on autoscaling
+                    logFile.println(t.getValue() + "\t" + computeD());
+                }
+            }
+            cd = (nanoTime() - cd);
+
+            if (doEvolve) {
+                ev = nanoTime();
+                evolve();
+                ev = (nanoTime() - ev);
+
+                as = nanoTime();
+                if (autoscale) {
+                    autoscale();
+                }
+                as = (nanoTime() - as);
+            }
+        }
+
+        if (profile) {
+            System.out.printf("wait: %d us\tclear: %d us\tdraw: %d us\td: %d us\tevolve: %d us\tautoscale: %d us\t" +
+                            "remaining: %d us\n",
+                    pw / 1000, tt / 1000, dd / 1000, cd / 1000, ev / 1000, as / 1000,
+                    (MAX_TIME - (tt + dd + cd + ev + as + pw)) / 1000
+            );
+        }
+
+        gl.glClear(GL_COLOR_BUFFER_BIT);
+        if (doPostCLear) {
+            gl.glUseProgram(postClearProgram);
+        } else {
+            gl.glUseProgram(program);
+        }
+        {
+            gl.glBindBuffer(GL4.GL_ARRAY_BUFFER, vertexBufferObject);
+            {
+                gl.glDrawArrays(GL4.GL_QUADS, 0, 4);
+            }
+            gl.glBindBuffer(GL4.GL_ARRAY_BUFFER, 0);
+        }
+    }
+
+    @Override
+    public void reshape(GLAutoDrawable drawable, int x, int y, int width, int height) {
+        drawable.getGL().getGL4().glViewport(x, y, width, height);
+    }
+
+    // ============================================================================
+    // Private methods
+    // ============================================================================
 
     private void initGLSide(GL4 gl, IntBuffer buffer) throws NoSuchResourceException {
         // create texture
         texture = GLUtil.createTexture(gl, buffer, width, height);
-
-        IntBuffer out = IntBuffer.wrap(new int[]{0});
-        gl.glGenFramebuffers(1, out);
-        textureFramebuffer = out.get();
-        textureDrawBuffers = IntBuffer.wrap(new int[]{GL4.GL_COLOR_ATTACHMENT0});
-        gl.glBindFramebuffer(GL4.GL_FRAMEBUFFER, textureFramebuffer);
-        {
-            gl.glFramebufferTexture(GL4.GL_FRAMEBUFFER, GL4.GL_COLOR_ATTACHMENT0,
-                    texture.getTextureObject(), 0);
-            gl.glDrawBuffers(1, textureDrawBuffers);
-        }
-        gl.glBindFramebuffer(GL4.GL_FRAMEBUFFER, 0);
 
         postClearProgram = GLUtil.createProgram(gl, vertexShader, fragmentClearShader);
         // create program w/ 2 shaders
@@ -180,11 +288,11 @@ public class MyGLCanvasWrapper implements GLEventListener {
         clContext = CLGLContext.create(context, chosenDevice);
         queue = chosenDevice.createCommandQueue();
 
-        newtonKernelWrapper = new NewtonKernelWrapper(
+        newtonKernelWrapper.initWith(
                 clContext,
                 clContext.createProgram(Util.loadSourceFile("cl/newton_fractal.cl"))
                         .build(
-                                "-I ./src/main/resources/cl/include -cl-no-signed-zeros -Werror")
+                                "-I ./src/main/resources/cl/include -cl-no-signed-zeros")
                         .createCLKernel("newton_fractal")
         );
         clearKernel = clContext.createProgram(Util.loadSourceFile("cl/clear_kernel.cl"))
@@ -198,144 +306,35 @@ public class MyGLCanvasWrapper implements GLEventListener {
                         define("HEIGHT", height)).createCLKernel("compute_bounding_box");
     }
 
-    @Override
-    public void init(GLAutoDrawable drawable) {
-        // perform CL initialization
-        GLContext context = drawable.getContext();
-        try {
-            initCLSide(context);
-        } catch (NoSuchResourceException e) {
-            e.printStackTrace();
+    private void evolve() {
+        if (t.evolve()) {
+            newtonKernelWrapper.setT(t.getValue());
         }
 
-        // perform GL initialization
-        GL4 gl = drawable.getGL().getGL4();
-        IntBuffer buffer = GLBuffers.newDirectIntBuffer(width * height);
-        try {
-            initGLSide(gl, buffer);
-        } catch (NoSuchResourceException e) {
-            e.printStackTrace(); // TODO decide what to do
+        if (cReal.evolve() | cImag.evolve()) {
+            newtonKernelWrapper.setC(cReal.getValue(), cImag.getValue());
         }
 
-        // interop
-        imageCL = clContext.createFromGLTexture2d(
-                buffer,
-                texture.getTarget(), texture.getTextureObject(),
-                0, CLMemory.Mem.WRITE_ONLY);
-
-        // kernel
-        newtonKernelWrapper.setBounds(minX.getValue(), maxX.getValue(), minY.getValue(), maxY.getValue());
-        newtonKernelWrapper.setC(cReal.getValue(), cImag.getValue());
-        newtonKernelWrapper.setT(t.getValue());
-        newtonKernelWrapper.setRunParams(64, 4, 1000, 3);
-        newtonKernelWrapper.setImage(imageCL);
-
-        clearKernel.setArg(0, imageCL);
-
-        computeKernel.setArg(0, imageCL);
-
-        boundingBoxKernel.setArg(0, imageCL);
-
-        boundingBoxBuffer = clContext.createIntBuffer(4, CLMemory.Mem.WRITE_ONLY);
-        boundingBoxKernel.setArg(1, boundingBoxBuffer);
-
-        drawable.setAutoSwapBufferMode(true);
-    }
-
-    @Override
-    public void dispose(GLAutoDrawable drawable) {
-        System.out.println("disposing...");
-        clContext.release();
-        if (logFile != null) {
-            logFile.close();
+        if (minY.evolve() | maxY.evolve() | maxX.evolve() | minX.evolve()) {
+            newtonKernelWrapper.setBounds(minX.getValue(), maxX.getValue(), minY.getValue(), maxY.getValue());
         }
     }
 
-    @Override
-    public void display(GLAutoDrawable drawable) {
-        GL4 gl = drawable.getGL().getGL4();
-
-        // clear texture
-        // FIXME not working properly; buffer seems shared with screen (?!)
-//        gl.glBindFramebuffer(GL4.GL_FRAMEBUFFER, textureFramebuffer);
-//        {
-//            gl.glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-//            gl.glClear(GL4.GL_COLOR_BUFFER_BIT);
-//        }
-//        gl.glBindFramebuffer(GL4.GL_FRAMEBUFFER, 0);
-
-        if (doRecomputeFractal) {
-            queue.putAcquireGLObject(imageCL);
-
-            if (doCLClear) {
-                queue.put2DRangeKernel(clearKernel, 0, 0,
-                        width, height, 0, 0);
-            }
-
-            newtonKernelWrapper.runOn(queue);
-
-            queue.putReleaseGLObject(imageCL);
-
-            if (doWaitForCL) {
-                queue.finish();
-            }
-
-            if (doEvolve) {
-                evolve();
-            }
+    private void autoscale() {
+        if (Math.abs(t.getValue()) < 1e-12) {
+            System.out.println("autoscale stopped");
+            autoscale = false;
         }
-
-        if (doComputeD) {
-            // TODO move such things to UI
-            System.out.println(t.getValue() + "\t" + computeD());
-            if (logFile == null) {
-                SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
-                try {
-                    logFile = new PrintStream("t-d@" + format.format(new Date()) + ".log");
-                } catch (FileNotFoundException e) {
-                    e.printStackTrace();
-                }
-            }
-            if (autoscale) { // TODO remove this dependency on autoscaling
-                logFile.println(t.getValue() + "\t" + computeD());
-            }
-        }
-
-        if (autoscale && doEvolve) {
-            if (Math.abs(t.getValue()) < 1e-12) {
-                System.out.println("autoscale stopped");
-                autoscale = false;
-            }
-            // + 1) compute bounding box
-            // - 2) save previous bounds to history (optional)
-            // + 3) change bounds corresponding to computed box
-            boundingBoxBuffer.getBuffer().put(0).put(width - 1).put(0).put(height - 1).rewind();
-            queue.putWriteBuffer(boundingBoxBuffer, true)
-                    .put1DRangeKernel(boundingBoxKernel,
-                            0, 4, 0)
-                    .finish()
-                    .putReadBuffer(boundingBoxBuffer, true);
-            boxToBounds(boundingBoxBuffer.getBuffer());
-        }
-
-        gl.glClear(GL_COLOR_BUFFER_BIT);
-        if (doPostCLear) {
-            gl.glUseProgram(postClearProgram);
-        } else {
-            gl.glUseProgram(program);
-        }
-        {
-            gl.glBindBuffer(GL4.GL_ARRAY_BUFFER, vertexBufferObject);
-            {
-                gl.glDrawArrays(GL4.GL_QUADS, 0, 4);
-            }
-            gl.glBindBuffer(GL4.GL_ARRAY_BUFFER, 0);
-        }
-    }
-
-    @Override
-    public void reshape(GLAutoDrawable drawable, int x, int y, int width, int height) {
-        drawable.getGL().getGL4().glViewport(x, y, width, height);
+        // + 1) compute bounding box
+        // - 2) save previous bounds to history (optional)
+        // + 3) change bounds corresponding to computed box
+        boundingBoxBuffer.getBuffer().put(0).put(width - 1).put(0).put(height - 1).rewind();
+        queue.putWriteBuffer(boundingBoxBuffer, true)
+                .put1DRangeKernel(boundingBoxKernel,
+                        0, 4, 0)
+                .finish()
+                .putReadBuffer(boundingBoxBuffer, true);
+        boxToBounds(boundingBoxBuffer.getBuffer());
     }
 
     private void boxToBounds(IntBuffer box) {
@@ -370,19 +369,41 @@ public class MyGLCanvasWrapper implements GLEventListener {
         maxY.setValue(newMaxY);
     }
 
-    private void evolve() {
-        if (t.evolve()) {
-            newtonKernelWrapper.setT(t.getValue());
+    private double computeD() {
+        int startBoxSize = 5;
+        int endBoxSize = width / 16;
+        double[][] boxes = new double[2][endBoxSize - startBoxSize];
+        // for all box sizes from 2 to maxXSize
+        for (int k = startBoxSize, bI = 0; k < endBoxSize; k++, bI++) {
+            int sizeY = (height / k) + (height % k == 0 ? 0 : 1);
+            int sizeX = (width / k) + (width % k == 0 ? 0 : 1);
+            int totalBoxes = sizeX * sizeY;
+            int activeBoxes = computeActiveBoxes(k);
+            //System.out.println(String.format("%d / %d", activeBoxes, totalBoxes));
+            boxes[0][bI] = log(1.0 / k);
+            boxes[1][bI] = log(activeBoxes);
+            // System.out.println(String.format("[%d] (%d) %f %f", bI, k, Math.log(1.0 / k), Math.log(activeBoxes)));
         }
-
-        if (cReal.evolve() | cImag.evolve()) {
-            newtonKernelWrapper.setC(cReal.getValue(), cImag.getValue());
-        }
-
-        if (minY.evolve() | maxY.evolve() | maxX.evolve() | minX.evolve()) {
-            newtonKernelWrapper.setBounds(minX.getValue(), maxX.getValue(), minY.getValue(), maxY.getValue());
-        }
+        return BoxCountingCalculator.normalEquations2d(boxes[0], boxes[1])[0];
     }
+
+    private int computeActiveBoxes(int boxSize) {
+        computeKernel.setArg(1, boxSize);
+        if (count == null) {
+            count = clContext.createIntBuffer(1, CLMemory.Mem.READ_WRITE);
+        }
+        count.getBuffer().put(0, 0);
+        computeKernel.setArg(2, count);
+        queue.putWriteBuffer(count, true)
+                .put2DRangeKernel(
+                        computeKernel, 0, 0, width, height, 0, 0);
+        queue.finish().putReadBuffer(count, true);
+        return count.getBuffer().get(0);
+    }
+
+    // ============================================================================
+    // Getters/setters
+    // ============================================================================
 
     public EvolvableParameter getMinX() {
         return minX;
@@ -472,71 +493,7 @@ public class MyGLCanvasWrapper implements GLEventListener {
         this.doComputeD = doComputeD;
     }
 
-    public int computeActiveBoxes(int boxSize) {
-        computeKernel.setArg(1, boxSize);
-        if (count == null) {
-            count = clContext.createIntBuffer(1, CLMemory.Mem.READ_WRITE);
-        }
-        count.getBuffer().put(0, 0);
-        computeKernel.setArg(2, count);
-        queue.putWriteBuffer(count, true)
-                .put2DRangeKernel(
-                        computeKernel, 0, 0, width, height, 0, 0);
-        queue.finish().putReadBuffer(count, true);
-        return count.getBuffer().get(0);
-    }
-
-    public double computeD() {
-        int startBoxSize = 5;
-        int endBoxSize = width / 16;
-        double[][] boxes = new double[2][endBoxSize - startBoxSize];
-        // for all box sizes from 2 to maxXSize
-        for (int k = startBoxSize, bI = 0; k < endBoxSize; k++, bI++) {
-            int sizeY = (height / k) + (height % k == 0 ? 0 : 1);
-            int sizeX = (width / k) + (width % k == 0 ? 0 : 1);
-            int totalBoxes = sizeX * sizeY;
-            int activeBoxes = computeActiveBoxes(k);
-            //System.out.println(String.format("%d / %d", activeBoxes, totalBoxes));
-            boxes[0][bI] = log(1.0 / k);
-            boxes[1][bI] = log(activeBoxes);
-            // System.out.println(String.format("[%d] (%d) %f %f", bI, k, Math.log(1.0 / k), Math.log(activeBoxes)));
-        }
-        return BoxCountingCalculator.normalEquations2d(boxes[0], boxes[1])[0];
-    }
-
-    @Override
-    public String toString() {
-        final StringBuilder sb = new StringBuilder("MyGLCanvasWrapper{");
-        sb.append("vertexData=").append(Arrays.toString(vertexData));
-        sb.append(", clContext=").append(clContext);
-        sb.append(", queue=").append(queue);
-        sb.append(", newtonKernelWrapper=").append(newtonKernelWrapper);
-        sb.append(", clearKernel=").append(clearKernel);
-        sb.append(", imageCL=").append(imageCL);
-        sb.append(", program=").append(program);
-        sb.append(", texture=").append(texture);
-        sb.append(", vertexBufferObject=").append(vertexBufferObject);
-        sb.append(", width=").append(width);
-        sb.append(", height=").append(height);
-        sb.append(", postClearProgram=").append(postClearProgram);
-        sb.append(", textureFramebuffer=").append(textureFramebuffer);
-        sb.append(", textureDrawBuffers=").append(textureDrawBuffers);
-        sb.append(", canvas=").append(canvas);
-        sb.append(", animator=").append(animator);
-        sb.append(", doEvolveBounds=").append(doEvolveBounds);
-        sb.append(", minX=").append(minX);
-        sb.append(", maxX=").append(maxX);
-        sb.append(", minY=").append(minY);
-        sb.append(", maxY=").append(maxY);
-        sb.append(", t=").append(t);
-        sb.append(", cReal=").append(cReal);
-        sb.append(", cImag=").append(cImag);
-        sb.append(", doCLClear=").append(doCLClear);
-        sb.append(", doPostCLear=").append(doPostCLear);
-        sb.append(", doWaitForCL=").append(doWaitForCL);
-        sb.append(", doEvolve=").append(doEvolve);
-        sb.append(", doRecomputeFractal=").append(doRecomputeFractal);
-        sb.append('}');
-        return sb.toString();
+    public NewtonKernelWrapper getNewtonKernelWrapper() {
+        return newtonKernelWrapper;
     }
 }

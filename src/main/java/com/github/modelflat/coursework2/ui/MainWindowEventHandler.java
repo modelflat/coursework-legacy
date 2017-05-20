@@ -1,6 +1,6 @@
 package com.github.modelflat.coursework2.ui;
 
-import com.github.modelflat.coursework2.core.MyGLCanvasWrapper;
+import com.jogamp.opengl.util.FPSAnimator;
 
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
@@ -10,27 +10,23 @@ import java.awt.event.WindowListener;
  */
 public class MainWindowEventHandler implements WindowListener {
 
-    private MyGLCanvasWrapper wrapper;
+    private FPSAnimator animator;
 
-    public MainWindowEventHandler(MyGLCanvasWrapper wrapper) {
-        this.wrapper = wrapper;
-        wrapper.getAnimator().start();
+    public MainWindowEventHandler(FPSAnimator animator) {
+        (this.animator = animator).start();
     }
 
     @Override
     public void windowOpened(WindowEvent e) {
-        System.out.println("window opened");
     }
 
     @Override
     public void windowClosing(WindowEvent e) {
-        System.out.println("window closing...");
-        wrapper.getAnimator().stop();
+        animator.stop();
     }
 
     @Override
     public void windowClosed(WindowEvent e) {
-        System.out.println("window closed.");
     }
 
     @Override

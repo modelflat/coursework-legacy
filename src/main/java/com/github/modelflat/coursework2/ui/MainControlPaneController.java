@@ -7,17 +7,30 @@ import com.github.modelflat.coursework2.util.NoSuchResourceException;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.control.CheckBox;
-import javafx.scene.control.Label;
+import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 
 /**
  * Created on 06.05.2017.
  */
 public class MainControlPaneController {
+
+    @FXML
+    private TextField workItemsTextField;
+    @FXML
+    private TextField runCountTextField;
+    @FXML
+    private TextField iterCountTextField;
+    @FXML
+    private TextField skipCountTextField;
+
+    @FXML
+    private Button applyRunSettingsButton;
 
     @FXML
     private VBox metaEvolutionPaneVBox;
@@ -64,6 +77,8 @@ public class MainControlPaneController {
     //
     @FXML
     private CheckBox doEvolveBoundsCheckBox;
+    @FXML
+    private Slider boundsSlider;
     //
     @FXML
     private CheckBox doEvolveXMinCheckBox;
@@ -99,6 +114,14 @@ public class MainControlPaneController {
     // ==========================================================================
     // ==========================================================================
 
+    @FXML
+    private Slider tSlider;
+    @FXML
+    private Slider cRealSlider;
+    @FXML
+    private Slider cImagSlider;
+
+
     private Thread watcher;
     private boolean watcherRunning = true;
     private int pause = 150;
@@ -120,7 +143,31 @@ public class MainControlPaneController {
         doEvolveYMinCheckBox.setSelected(wrapper.getMinY().evolving());
         doEvolveYMaxCheckBox.setSelected(wrapper.getMaxY().evolving());
 
+        iterCountTextField.setText(wrapper.getNewtonKernelWrapper().getDefaultIterCount() + "");
+        runCountTextField.setText(wrapper.getNewtonKernelWrapper().getDefaultRunCount() + "");
+        workItemsTextField.setText(wrapper.getNewtonKernelWrapper().getDefaultWorkSize() + "");
+        skipCountTextField.setText(wrapper.getNewtonKernelWrapper().getDefaultSkipCount() + "");
+
+        boundsSlider.setMin(0.0);
+        boundsSlider.setMax(10.0); // TODO replace magic
+        boundsSlider.setValue(1.0);
+        boundsSlider.setBlockIncrement(0.01);
+        boundsSlider.valueProperty().addListener((observable, oldValue, newValue) -> {
+            MyGLCanvasWrapper wrapper1 = App.getInstance().getWrapper();
+            wrapper1.getMaxX().setValue(newValue.doubleValue());
+            //scaleAndClamp(newValue.doubleValue(), wrapper1.getMaxX()));
+            wrapper1.getMaxY().setValue(newValue.doubleValue());
+            //scaleAndClamp(newValue.doubleValue(), wrapper1.getMaxY()));
+            wrapper1.getMinY().setValue(-newValue.doubleValue());
+            //scaleAndClamp(newValue.doubleValue(), wrapper1.getMinY()));
+            wrapper1.getMinX().setValue(-newValue.doubleValue());
+            //scaleAndClamp(newValue.doubleValue(), wrapper1.getMinX()));
+        });
+
+        // tSlider.minProperty().
+
         // set up parameter watcher thread
+        // TODO this thread is needed to make mainloop more lightweight. probably it doesnt matter?
         watcher = new Thread(() -> {
             while (watcherRunning) {
                 MyGLCanvasWrapper wrapper1 = App.getInstance().getWrapper();
@@ -303,6 +350,19 @@ public class MainControlPaneController {
         App.getInstance().getWrapper().setDoRecomputeFractal(doRecomputeFractalCheckBox.isSelected());
     }
 
+    public void applyRunSettingsButtonClicked() {
+        try {
+            int iterCount = Integer.parseInt(iterCountTextField.getText());
+            int runCount = Integer.parseInt(runCountTextField.getText());
+            int workSize = Integer.parseInt(workItemsTextField.getText());
+            int skip = Integer.parseInt(skipCountTextField.getText());
+
+            App.getInstance().getWrapper().getNewtonKernelWrapper()
+                    .setRunParams(workSize, runCount, iterCount, skip);
+        } catch (NumberFormatException ignored) {
+        }
+    }
+
     private Stage createCustomizer(String name, EvolvableParameter parameter) {
         try {
             ParamCustomizationPane p = new ParamCustomizationPane(parameter);
@@ -323,6 +383,13 @@ public class MainControlPaneController {
         } catch (NoSuchResourceException e) {
             throw new RuntimeException("cannot create customizer", e);
         }
+    }
+
+    private double scaleAndClamp(double scale, EvolvableParameter parameter) {
+        return max(
+                min(parameter.getValue() * scale, parameter.getUpper()),
+                parameter.getLower()
+        );
     }
 
     @Override

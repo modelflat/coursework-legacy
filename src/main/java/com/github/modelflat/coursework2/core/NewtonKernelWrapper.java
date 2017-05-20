@@ -12,6 +12,11 @@ import java.util.Random;
  */
 public class NewtonKernelWrapper {
 
+    private final int
+            defaultIterCount = 256,
+            defaultRunCount = 1,
+            defaultWorkSize = 4096,
+            defaultSkipCount = 3;
     private DoubleBuffer cBuffer = GLBuffers.newDirectDoubleBuffer(2);
     private CLBuffer<DoubleBuffer> cCLBuffer;
     private CLKernel kernel;
@@ -19,9 +24,13 @@ public class NewtonKernelWrapper {
     private Random rng = new Random();
     private int workItems;
 
-    public NewtonKernelWrapper(CLContext context, CLKernel kernel) {
+    public NewtonKernelWrapper() {
+    }
+
+    public void initWith(CLContext context, CLKernel kernel) {
         this.context = context;
         this.kernel = kernel;
+        setRunParams(defaultWorkSize, defaultRunCount, defaultIterCount, defaultSkipCount);
     }
 
     public void setBounds(double minX, double maxX, double minY, double maxY) {
@@ -58,5 +67,21 @@ public class NewtonKernelWrapper {
     public CLCommandQueue runOn(CLCommandQueue queue) {
         kernel.setArg(9, rng.nextLong());
         return queue.put1DRangeKernel(kernel, 0, workItems, 0);
+    }
+
+    public int getDefaultIterCount() {
+        return defaultIterCount;
+    }
+
+    public int getDefaultRunCount() {
+        return defaultRunCount;
+    }
+
+    public int getDefaultWorkSize() {
+        return defaultWorkSize;
+    }
+
+    public int getDefaultSkipCount() {
+        return defaultSkipCount;
     }
 }

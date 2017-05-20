@@ -7,7 +7,7 @@
     #define PRECISION 1e-4
 #endif
 
-#define DYNAMIC_COLOR 0
+#define DYNAMIC_COLOR 1
 
 // Draws newton fractal
 kernel void newton_fractal(
@@ -30,7 +30,7 @@ kernel void newton_fractal(
     const real2 C = {C_const[0], C_const[1]};
     // color
     #if (DYNAMIC_COLOR)
-        float4 color = {fabs(sin(PI * t / 3.)), fabs(cos(PI * t / 3.)), 0.0, 0.0};
+        float4 color = {1.0, 1.0, 1.0, 1.0};//{fabs(sin(PI * t / 3.)), fabs(cos(PI * t / 3.)), 0.0, 0.0};
     #else
         float4 color = {1.0, 1.0, 1.0, 1.0};
     #endif
@@ -51,24 +51,25 @@ kernel void newton_fractal(
     const real2 c = C * (-t) / (3 - t);
     const real a_modifier = (-3) / (3 - t);
     const real color_alpha_increment = (real)(1.0 / (points_count + 1));
+    // TODO run count was proved to be inefficient. remove?
     for (int run = 0; run < runs_count; ++run) {
         // choose starting point
         real2 starting_point = {
-            (random(&rng_state)) * span_x /2.0 + min_x,
-            (random(&rng_state)) * span_y /2.0 + min_y
+            ((random(&rng_state)) * span_x + min_x) / 2,
+            ((random(&rng_state)) * span_y + min_y) / 2
         };
         uint is = iter_skip;
         int frozen = 0;
 
         #if (DYNAMIC_COLOR)
-            color.w = color_alpha_increment;
+            //color.w = color_alpha_increment;
         #endif
 
         // iterate through solutions of cubic equation
         for (int i = 0; i < points_count; ++i) {
             // compute next point:
             a = starting_point * a_modifier;
-            uint root_number = as_uint(random(&rng_state)) % 3;
+            uint root_number = (as_uint(random(&rng_state)) >> 7) % 3;
             solve_cubic_newton_fractal_optimized(a, c, 1e-8, root_number, roots);
             starting_point = roots[root_number];
 
@@ -80,7 +81,7 @@ kernel void newton_fractal(
 
                 // draw next point:
                 #if (DYNAMIC_COLOR)
-                    color.w += color_alpha_increment;
+                    color.yz -= color_alpha_increment;
                 #endif
                 if (coord.x < image_width && coord.y < image_height && coord.x >= 0 && coord.y >= 0) {
                     write_imagef(out_image, coord, color);

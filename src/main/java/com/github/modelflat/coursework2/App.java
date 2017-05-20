@@ -5,6 +5,7 @@ import com.github.modelflat.coursework2.networking.Forismatic;
 import com.github.modelflat.coursework2.ui.MainWindowEventHandler;
 import com.github.modelflat.coursework2.util.NoSuchResourceException;
 import com.github.modelflat.coursework2.util.Util;
+import com.jogamp.opengl.util.FPSAnimator;
 import javafx.application.Platform;
 import javafx.embed.swing.JFXPanel;
 import javafx.scene.Group;
@@ -41,11 +42,14 @@ public class App {
             Forismatic.getQuote(citeLanguage, defaultWindowName).thenAccept(frame::setTitle);
         }
 
-        frame.getContentPane().setLayout(
+        frame.setLayout(
                 new BoxLayout(frame.getContentPane(), BoxLayout.X_AXIS)
         );
 
-        wrapper = new MyGLCanvasWrapper(512, 512);
+        FPSAnimator animator = new FPSAnimator(60, true);
+
+        wrapper = new MyGLCanvasWrapper(animator,
+                1024, 1024, 1024 / 4 * 3, 1024 / 4 * 3);
         wrapper.getCanvas().addMouseWheelListener(event -> {
             int increment = event.getWheelRotation();
             wrapper.getMinX().incValue(increment);
@@ -55,28 +59,39 @@ public class App {
         });
         frame.add(wrapper.getCanvas());
 
-        frame.addWindowListener(new MainWindowEventHandler(wrapper));
+        frame.addWindowListener(new MainWindowEventHandler(animator));
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 
         final JFXPanel fxPanel = new JFXPanel();
-        fxPanel.setSize(400, 600);
-        fxPanel.setPreferredSize(new Dimension(400, 600));
-        frame.add(fxPanel);
 
-        frame.pack();
-        frame.setVisible(true);
-
-        Platform.runLater(() -> initFX(fxPanel));
+        Platform.runLater(() -> {
+            initFX(fxPanel);
+            SwingUtilities.invokeLater(() -> {
+                frame.add(fxPanel);
+                frame.pack();
+                frame.setVisible(true);
+            });
+        });
     }
 
     private void initFX(JFXPanel fxPanel) {
         Group root = new Group();
+        AnchorPane pane;
         try {
-            root.getChildren().addAll((AnchorPane) Util.loadFXML("fxml/main_control_pane.fxml"));
+            root.getChildren().addAll(pane = (AnchorPane) Util.loadFXML("fxml/main_control_pane.fxml"));
         } catch (NoSuchResourceException e) {
             e.printStackTrace();
+            return;
         }
         fxPanel.setScene(new Scene(root, Color.ALICEBLUE));
+
+        Dimension fixedSize = new Dimension();
+        fixedSize.setSize(pane.getPrefWidth(), pane.getPrefHeight());
+
+        fxPanel.setPreferredSize(fixedSize);
+        fxPanel.setMinimumSize(fixedSize);
+        fxPanel.setMaximumSize(fixedSize);
+        fxPanel.setSize(fixedSize);
     }
 
     public MyGLCanvasWrapper getWrapper() {

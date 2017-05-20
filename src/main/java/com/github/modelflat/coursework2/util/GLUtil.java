@@ -71,11 +71,6 @@ public class GLUtil {
         if (fragmentShader != null) {
             int frag = createShader(gl, GL4.GL_FRAGMENT_SHADER, fragmentShader);
             gl.glAttachShader(prog, frag);
-            IntBuffer logSize = IntBuffer.wrap(new int[1]);
-            gl.glGetShaderiv(frag, GL4.GL_INFO_LOG_LENGTH, logSize);
-            ByteBuffer buf = ByteBuffer.allocate(logSize.get(0) + 1);
-            gl.glGetShaderInfoLog(frag, logSize.get(0), logSize, buf);
-            System.out.println(new String(buf.array()));
             gl.glDeleteShader(frag);
         }
 
@@ -98,6 +93,14 @@ public class GLUtil {
             }
         }
         return null;
+    }
+
+    public static <T extends GL3> String getShaderBuildLog(T gl, int shader) {
+        IntBuffer logSize = IntBuffer.wrap(new int[1]);
+        gl.glGetShaderiv(shader, GL4.GL_INFO_LOG_LENGTH, logSize);
+        ByteBuffer buf = ByteBuffer.allocate(logSize.get(0) + 1);
+        gl.glGetShaderInfoLog(shader, logSize.get(0), logSize, buf);
+        return new String(buf.array());
     }
 
 }
