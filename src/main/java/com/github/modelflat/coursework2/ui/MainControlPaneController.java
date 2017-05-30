@@ -21,6 +21,8 @@ import static java.lang.Math.min;
 public class MainControlPaneController {
 
     @FXML
+    private Button saveImageButton;
+    @FXML
     private TextField workItemsTextField;
     @FXML
     private TextField runCountTextField;
@@ -400,5 +402,10 @@ public class MainControlPaneController {
             watcher.join(pause);
         } catch (Throwable ignored) {
         }
+    }
+
+    public void saveImageButtonClicked() {
+        App.getInstance().getWrapper().setSaveScreenshot(true);
+        // saveImageButton.setDisable(true);
     }
 }

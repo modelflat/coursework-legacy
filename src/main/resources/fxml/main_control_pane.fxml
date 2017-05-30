@@ -5,7 +5,7 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.*?>
 <AnchorPane xmlns:fx="http://javafx.com/fxml/1" cache="true" cacheHint="SPEED" depthTest="DISABLE" maxHeight="-Infinity"
-            maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" pickOnBounds="false" prefHeight="600.0"
+            maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" pickOnBounds="false" prefHeight="612.0"
             prefWidth="300.0" xmlns="http://javafx.com/javafx/8.0.112"
             fx:controller="com.github.modelflat.coursework2.ui.MainControlPaneController">
     <VBox layoutX="10.0" layoutY="10.0" prefHeight="504.0" prefWidth="300.0">
@@ -301,6 +301,8 @@
             </VBox>
         </VBox>
     </VBox>
+    <Button fx:id="saveImageButton" layoutX="14.0" layoutY="586.0" mnemonicParsing="false"
+            onMouseClicked="#saveImageButtonClicked" prefHeight="25.0" prefWidth="80.0" text="Save image"/>
     <padding>
         <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
     </padding>

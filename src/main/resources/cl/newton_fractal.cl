@@ -7,7 +7,7 @@
     #define PRECISION 1e-4
 #endif
 
-#define DYNAMIC_COLOR 1
+#define DYNAMIC_COLOR 0
 
 // Draws newton fractal
 kernel void newton_fractal(
@@ -30,9 +30,9 @@ kernel void newton_fractal(
     const real2 C = {C_const[0], C_const[1]};
     // color
     #if (DYNAMIC_COLOR)
-        float4 color = {1.0, 1.0, 1.0, 1.0};//{fabs(sin(PI * t / 3.)), fabs(cos(PI * t / 3.)), 0.0, 0.0};
+        float4 color = {fabs(sin(PI * t / 3.)), fabs(cos(PI * t / 3.)), 0.0, 0.0};
     #else
-        float4 color = {1.0, 1.0, 1.0, 1.0};
+        float4 color = {0.0, 0.0, 0.0, 1.0};
     #endif
     // initialize pRNG
     uint2 rng_state;

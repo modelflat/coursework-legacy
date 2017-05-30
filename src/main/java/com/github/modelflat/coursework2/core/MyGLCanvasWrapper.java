@@ -15,8 +15,15 @@ import com.jogamp.opengl.awt.GLCanvas;
 import com.jogamp.opengl.util.FPSAnimator;
 import com.jogamp.opengl.util.GLBuffers;
 import com.jogamp.opengl.util.texture.Texture;
+import javafx.embed.swing.SwingFXUtils;
+import javafx.scene.image.PixelFormat;
+import javafx.scene.image.PixelWriter;
+import javafx.scene.image.WritableImage;
 
+import javax.imageio.ImageIO;
+import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.IntBuffer;
 import java.text.SimpleDateFormat;
@@ -62,14 +69,14 @@ public class MyGLCanvasWrapper implements GLEventListener {
     private int postClearProgram;
     private GLCanvas canvas;
     private boolean doEvolveBounds = false;
-    private EvolvableParameter minX = new EvolvableParameter(false, -1, 0.0, -10.0, 0.0);
-    private EvolvableParameter maxX = new EvolvableParameter(false, 1, -0.0, 0.0, 10.0);
-    private EvolvableParameter minY = new EvolvableParameter(false, -1, 0.0, -10.0, 0.0);
-    private EvolvableParameter maxY = new EvolvableParameter(false, 1, -0.0, -0.0, 10.0);
-    private EvolvableParameter t = new EvolvableParameter(true,
+    private EvolvableParameter minX = new EvolvableParameter(false, -2e-4, 0.0, -10.0, 0.0);
+    private EvolvableParameter maxX = new EvolvableParameter(false, 2e-4, -0.0, 0.0, 10.0);
+    private EvolvableParameter minY = new EvolvableParameter(false, -2e-4, 0.0, -10.0, 0.0);
+    private EvolvableParameter maxY = new EvolvableParameter(false, 2e-4, -0.0, -0.0, 10.0);
+    private EvolvableParameter t = new EvolvableParameter(false,
             new ApproachingEvolutionStrategy(
-                    ApproachingEvolutionStrategy.InternalStrategy.STOP_AT_POINT_OF_INTEREST, 0.0),
-            3.4, -.01, -1.0, 10.0);
+                    ApproachingEvolutionStrategy.InternalStrategy.STOP_AT_POINT_OF_INTEREST, 3.0),
+            1e-12, -.00, -1.0, 10.0);
     private EvolvableParameter cReal = new EvolvableParameter(false, .5, -.05, -1.0, 1.0);
     private EvolvableParameter cImag = new EvolvableParameter(false, -.5, .05, -1.0, 1.0);
     private boolean doCLClear = true;
@@ -84,6 +91,7 @@ public class MyGLCanvasWrapper implements GLEventListener {
     private boolean doComputeD = false;
     private CLBuffer<IntBuffer> count;
     private PrintStream logFile;
+    private boolean saveScreenshot = false;
 
     public MyGLCanvasWrapper(FPSAnimator animator, int width, int height, int canvasWidth, int canvasHeight) {
         this.width = width;
@@ -162,6 +170,7 @@ public class MyGLCanvasWrapper implements GLEventListener {
                 //.finish()
                 ;
             }
+
             tt = (nanoTime() - tt);
 
             dd = nanoTime();
@@ -187,9 +196,7 @@ public class MyGLCanvasWrapper implements GLEventListener {
                         e.printStackTrace();
                     }
                 }
-                if (autoscale) { // TODO remove this dependency on autoscaling
-                    logFile.println(t.getValue() + "\t" + computeD());
-                }
+                logFile.println(t.getValue() + "\t" + computeD());
             }
             cd = (nanoTime() - cd);
 
@@ -204,6 +211,23 @@ public class MyGLCanvasWrapper implements GLEventListener {
                 }
                 as = (nanoTime() - as);
             }
+        }
+
+        if (saveScreenshot) {
+            queue.finish();
+            queue.putAcquireGLObject(imageCL);
+            // refresh image
+            queue.putReadImage(imageCL, true).finish();
+            String info = "t = " + t.getValue() + "; bounds = " +
+                    minX.getValue() + "," + minY.getValue() + "," + maxX.getValue() + "," + maxY.getValue();
+            SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
+            try {
+                saveScreenshot("screenshot" + format.format(new Date()) + "(" + info + ").png");
+            } catch (IOException e) {
+                System.err.println("unable to save screenshot: " + e.getMessage());
+            }
+            queue.putReleaseGLObject(imageCL);
+            saveScreenshot = false;
         }
 
         if (profile) {
@@ -401,6 +425,15 @@ public class MyGLCanvasWrapper implements GLEventListener {
         return count.getBuffer().get(0);
     }
 
+    private void saveScreenshot(String filename) throws IOException {
+        IntBuffer imageBuffer = imageCL.getBuffer();
+        WritableImage image = new WritableImage(width, height);
+        PixelWriter writer = image.getPixelWriter();
+        // TODO RGBA -> ARGB, color change occurs
+        writer.setPixels(0, 0, width, height, PixelFormat.getIntArgbInstance(), imageBuffer, width);
+        ImageIO.write(SwingFXUtils.fromFXImage(image, null), "png", new File(filename));
+    }
+
     // ============================================================================
     // Getters/setters
     // ============================================================================
@@ -491,6 +524,14 @@ public class MyGLCanvasWrapper implements GLEventListener {
 
     public void setDoComputeD(boolean doComputeD) {
         this.doComputeD = doComputeD;
+    }
+
+    public boolean doSaveScreenshot() {
+        return saveScreenshot;
+    }
+
+    public void setSaveScreenshot(boolean saveScreenshot) {
+        this.saveScreenshot = saveScreenshot;
     }
 
     public NewtonKernelWrapper getNewtonKernelWrapper() {

@@ -16,7 +16,7 @@ public class NewtonKernelWrapper {
             defaultIterCount = 256,
             defaultRunCount = 1,
             defaultWorkSize = 4096,
-            defaultSkipCount = 3;
+            defaultSkipCount = 64;
     private DoubleBuffer cBuffer = GLBuffers.newDirectDoubleBuffer(2);
     private CLBuffer<DoubleBuffer> cCLBuffer;
     private CLKernel kernel;
