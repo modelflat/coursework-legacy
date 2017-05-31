@@ -67,6 +67,7 @@
                         <Insets bottom="4.0" top="4.0"/>
                     </FlowPane.margin>
                 </Button>
+                <TextField fx:id="colorTextBox"/>
             </FlowPane>
             <opaqueInsets>
                 <Insets bottom="5.0"/>

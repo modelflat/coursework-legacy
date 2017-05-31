@@ -49,7 +49,7 @@ public class App {
         FPSAnimator animator = new FPSAnimator(60, true);
 
         wrapper = new MyGLCanvasWrapper(animator,
-                1024, 1024, 1024 / 4 * 3, 1024 / 4 * 3);
+                512, 512, 512, 512);
         wrapper.getCanvas().addMouseWheelListener(event -> {
             int increment = event.getWheelRotation();
             wrapper.getMinX().incValue(increment);

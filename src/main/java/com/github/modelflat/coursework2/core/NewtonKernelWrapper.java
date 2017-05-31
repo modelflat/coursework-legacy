@@ -5,6 +5,7 @@ import com.jogamp.opencl.gl.CLGLImage2d;
 import com.jogamp.opengl.util.GLBuffers;
 
 import java.nio.DoubleBuffer;
+import java.nio.FloatBuffer;
 import java.util.Random;
 
 /**
@@ -19,6 +20,8 @@ public class NewtonKernelWrapper {
             defaultSkipCount = 64;
     private DoubleBuffer cBuffer = GLBuffers.newDirectDoubleBuffer(2);
     private CLBuffer<DoubleBuffer> cCLBuffer;
+    private FloatBuffer colorBuffer = GLBuffers.newDirectFloatBuffer(4);
+    private CLBuffer<FloatBuffer> colorCLBuffer;
     private CLKernel kernel;
     private CLContext context;
     private Random rng = new Random();
@@ -31,6 +34,7 @@ public class NewtonKernelWrapper {
         this.context = context;
         this.kernel = kernel;
         setRunParams(defaultWorkSize, defaultRunCount, defaultIterCount, defaultSkipCount);
+        setColor(0.0f, 0.0f, 0.0f, 1.0f);
     }
 
     public void setBounds(double minX, double maxX, double minY, double maxY) {
@@ -60,8 +64,19 @@ public class NewtonKernelWrapper {
         kernel.setArg(8, skipCount);
     }
 
+    public void setColor(float r, float g, float b, float a) {
+        colorBuffer.put(0, r);
+        colorBuffer.put(1, g);
+        colorBuffer.put(2, b);
+        colorBuffer.put(3, a);
+        if (colorCLBuffer == null) {
+            colorCLBuffer = context.createBuffer(colorBuffer, CLMemory.Mem.USE_BUFFER, CLMemory.Mem.READ_ONLY);
+        }
+        kernel.setArg(10, colorCLBuffer);
+    }
+
     public void setImage(CLGLImage2d image) {
-        kernel.setArg(10, image);
+        kernel.setArg(11, image);
     }
 
     public CLCommandQueue runOn(CLCommandQueue queue) {

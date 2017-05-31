@@ -21,6 +21,8 @@ import static java.lang.Math.min;
 public class MainControlPaneController {
 
     @FXML
+    private TextField colorTextBox;
+    @FXML
     private Button saveImageButton;
     @FXML
     private TextField workItemsTextField;
@@ -363,6 +365,31 @@ public class MainControlPaneController {
                     .setRunParams(workSize, runCount, iterCount, skip);
         } catch (NumberFormatException ignored) {
         }
+        String color = colorTextBox.getText();
+        float[] colorFloatComponents = new float[4];
+        if (color != null && !color.isEmpty()) {
+            String[] colorComponents = color.split("\\s*,\\s*");
+            for (int i = 0; i < colorFloatComponents.length; ++i) {
+                if (i < colorComponents.length) {
+                    try {
+                        colorFloatComponents[i] = Float.parseFloat(colorComponents[i]);
+                    } catch (NumberFormatException ignored) {
+                        colorFloatComponents[i] = 0.5f;
+                    }
+                } else {
+                    colorFloatComponents[i] = 0.5f;
+                }
+            }
+            if (colorFloatComponents.length - colorComponents.length == 1) {
+                colorFloatComponents[colorComponents.length] = 1.0f; // set alpha
+            }
+        }
+        App.getInstance().getWrapper().getNewtonKernelWrapper().setColor(
+                colorFloatComponents[0],
+                colorFloatComponents[1],
+                colorFloatComponents[2],
+                colorFloatComponents[3]
+        );
     }
 
     private Stage createCustomizer(String name, EvolvableParameter parameter) {
