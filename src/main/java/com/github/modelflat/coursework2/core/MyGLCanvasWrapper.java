@@ -7,10 +7,7 @@ import com.github.modelflat.coursework2.util.Util;
 import com.jogamp.opencl.*;
 import com.jogamp.opencl.gl.CLGLContext;
 import com.jogamp.opencl.gl.CLGLImage2d;
-import com.jogamp.opengl.GL4;
-import com.jogamp.opengl.GLAutoDrawable;
-import com.jogamp.opengl.GLContext;
-import com.jogamp.opengl.GLEventListener;
+import com.jogamp.opengl.*;
 import com.jogamp.opengl.awt.GLCanvas;
 import com.jogamp.opengl.util.FPSAnimator;
 import com.jogamp.opengl.util.GLBuffers;
@@ -69,14 +66,14 @@ public class MyGLCanvasWrapper implements GLEventListener {
     private int postClearProgram;
     private GLCanvas canvas;
     private boolean doEvolveBounds = false;
-    private EvolvableParameter minX = new EvolvableParameter(false, -2e-4, 0.0, -10.0, 0.0);
-    private EvolvableParameter maxX = new EvolvableParameter(false, 2e-4, -0.0, 0.0, 10.0);
-    private EvolvableParameter minY = new EvolvableParameter(false, -2e-4, 0.0, -10.0, 0.0);
-    private EvolvableParameter maxY = new EvolvableParameter(false, 2e-4, -0.0, -0.0, 10.0);
+    private EvolvableParameter minX = new EvolvableParameter(false, -1, 0.0, -10.0, 0.0);
+    private EvolvableParameter maxX = new EvolvableParameter(false, 1, -0.0, 0.0, 10.0);
+    private EvolvableParameter minY = new EvolvableParameter(false, -1, 0.0, -10.0, 0.0);
+    private EvolvableParameter maxY = new EvolvableParameter(false, 1, -0.0, -0.0, 10.0);
     private EvolvableParameter t = new EvolvableParameter(false,
             new ApproachingEvolutionStrategy(
                     ApproachingEvolutionStrategy.InternalStrategy.STOP_AT_POINT_OF_INTEREST, 3.0),
-            1e-12, -.00, -1.0, 10.0);
+            1, -.00, -1.0, 10.0);
     private EvolvableParameter cReal = new EvolvableParameter(false, .5, -.05, -1.0, 1.0);
     private EvolvableParameter cImag = new EvolvableParameter(false, -.5, .05, -1.0, 1.0);
     private boolean doCLClear = true;
@@ -97,9 +94,12 @@ public class MyGLCanvasWrapper implements GLEventListener {
         this.width = width;
         this.height = height;
 
-        canvas = new GLCanvas();
+        canvas = new GLCanvas(
+             new GLCapabilities(GLProfile.getMaxProgrammableCore( true ))
+        );
 
         canvas.addGLEventListener(this);
+
         canvas.setSize(canvasWidth, canvasHeight);//width, height);
         animator.add(canvas);
     }
@@ -108,6 +108,11 @@ public class MyGLCanvasWrapper implements GLEventListener {
     public void init(GLAutoDrawable drawable) {
         // perform CL initialization
         GLContext context = drawable.getContext();
+
+        System.out.println(
+                context.getGL().glGetString(context.getGL().GL_VENDOR)
+        );
+
         try {
             initCLSide(context);
         } catch (NoSuchResourceException e) {
@@ -238,6 +243,7 @@ public class MyGLCanvasWrapper implements GLEventListener {
             );
         }
 
+        // long drw = System.nanoTime();
         gl.glClear(GL_COLOR_BUFFER_BIT);
         if (doPostCLear) {
             gl.glUseProgram(postClearProgram);
@@ -247,10 +253,10 @@ public class MyGLCanvasWrapper implements GLEventListener {
         {
             gl.glBindBuffer(GL4.GL_ARRAY_BUFFER, vertexBufferObject);
             {
-                gl.glDrawArrays(GL4.GL_QUADS, 0, 4);
+                gl.glDrawArrays(GL4.GL_TRIANGLE_FAN, 0, 4);
             }
-            gl.glBindBuffer(GL4.GL_ARRAY_BUFFER, 0);
         }
+        // System.out.println((System.nanoTime() - drw) / 1000 + "us");
     }
 
     @Override
@@ -301,15 +307,22 @@ public class MyGLCanvasWrapper implements GLEventListener {
     }
 
     private void initCLSide(GLContext context) throws NoSuchResourceException {
+
         CLPlatform chosenPlatform = CLPlatform.getDefault();
+        System.out.println(chosenPlatform);
         CLDevice chosenDevice = GLUtil.findGLCompatibleDevice(chosenPlatform);
+        System.out.println(chosenDevice);
+
+        System.out.println(context);
+
+        System.out.println("\n\n\n" + context.getGLExtensionsString() + "\n\n\n" + context.getGLSLVersionString());
 
         if (chosenDevice == null) {
             throw new RuntimeException(String.format("no device supporting GL sharing on platform %s!",
                     chosenPlatform.toString()));
         }
-
         clContext = CLGLContext.create(context, chosenDevice);
+
         queue = chosenDevice.createCommandQueue();
 
         newtonKernelWrapper.initWith(

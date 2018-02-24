@@ -34,7 +34,7 @@ kernel void newton_fractal(
     #if (DYNAMIC_COLOR)
         float4 color = {fabs(sin(PI * t / 3.)), fabs(cos(PI * t / 3.)), 0.0, 0.0};
     #else
-        float4 color = color_in[0];// {0.0, 0.0, 0.0, 1.0};
+        float4 color = {0.0, 0.0, 0.0, 1.0};
     #endif
     // initialize pRNG
     uint2 rng_state;
@@ -79,7 +79,7 @@ kernel void newton_fractal(
             if (is == 0) {
                 // transform coords:
                 coord.x = (starting_point.x - min_x) / scale_x;
-                coord.y = image_height - 1 - (int)((starting_point.y - min_y) / scale_y);
+                coord.y = /*image_height - 1 - */(int)((starting_point.y - min_y) / scale_y);
 
                 // draw next point:
                 #if (DYNAMIC_COLOR)
