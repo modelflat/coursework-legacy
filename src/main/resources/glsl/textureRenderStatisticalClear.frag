@@ -16,7 +16,7 @@ const int base_y_deviation = base_x_deviation;
 // replaced with clear_color.
 const float factor = .1;
 const float alpha_factor = .1;
-const vec4 clear_color = vec4(0.0, 0.0, 0.0, 0.0);
+const vec4 clear_color = vec4(1.0, 1.0, 1.0, 1.0);
 
 void main() {
     vec4 texColor = texture(tex, fragmentUV);

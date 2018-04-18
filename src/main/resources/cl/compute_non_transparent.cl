@@ -15,7 +15,8 @@ kernel void compute(read_only image2d_t image, uint boxSize, global uint* counte
             if (x > image_width - 1 || y > image_height - 1) {
                 continue;
             }
-            if (read_imagef(image, sampler, (int2)(x, y)).w > 0.1) {
+            const float4 color = read_imagef(image, sampler, (int2)(x, y));
+            if (color.w > 0.1) {
                 atomic_inc( counter );
                 return;
             }

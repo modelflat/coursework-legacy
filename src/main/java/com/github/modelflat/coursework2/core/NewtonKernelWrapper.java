@@ -14,10 +14,10 @@ import java.util.Random;
 public class NewtonKernelWrapper {
 
     private final int
-            defaultIterCount = 256,
+            defaultIterCount = 512,
             defaultRunCount = 1,
-            defaultWorkSize = 4096,
-            defaultSkipCount = 64;
+            defaultWorkSize = 8192,
+            defaultSkipCount = 128;
     private DoubleBuffer cBuffer = GLBuffers.newDirectDoubleBuffer(2);
     private CLBuffer<DoubleBuffer> cCLBuffer;
     private FloatBuffer colorBuffer = GLBuffers.newDirectFloatBuffer(4);
@@ -53,15 +53,17 @@ public class NewtonKernelWrapper {
         kernel.setArg(4, cCLBuffer);
     }
 
-    public void setT(double t) {
-        kernel.setArg(5, t);
+    public void setH(double h) {
+        kernel.setArg(6, h);
     }
+
+    public void setT(int t) { kernel.setArg(5, t); }
 
     public void setRunParams(int workItems, int runCount, int iterCount, int skipCount) {
         this.workItems = workItems;
-        kernel.setArg(6, runCount);
-        kernel.setArg(7, iterCount);
-        kernel.setArg(8, skipCount);
+        kernel.setArg(7, runCount);
+        kernel.setArg(8, iterCount);
+        kernel.setArg(9, skipCount);
     }
 
     public void setColor(float r, float g, float b, float a) {
@@ -72,15 +74,15 @@ public class NewtonKernelWrapper {
         if (colorCLBuffer == null) {
             colorCLBuffer = context.createBuffer(colorBuffer, CLMemory.Mem.USE_BUFFER, CLMemory.Mem.READ_ONLY);
         }
-        kernel.setArg(10, colorCLBuffer);
+        kernel.setArg(11, colorCLBuffer);
     }
 
     public void setImage(CLGLImage2d image) {
-        kernel.setArg(11, image);
+        kernel.setArg(12, image);
     }
 
     public CLCommandQueue runOn(CLCommandQueue queue) {
-        kernel.setArg(9, rng.nextLong());
+        kernel.setArg(10, rng.nextLong());
         return queue.put1DRangeKernel(kernel, 0, workItems, 0);
     }
 

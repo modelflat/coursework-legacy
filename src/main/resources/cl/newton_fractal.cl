@@ -9,12 +9,32 @@
 
 #define DYNAMIC_COLOR 0
 
+float3 hsv2rgb(float3 hsv) {
+    const float c = hsv.y * hsv.z;
+    const float x = c * (1 - fabs(fmod( hsv.x / 60, 2 ) - 1));
+    float3 rgb;
+    if      (0 <= hsv.x && hsv.x < 60) {
+        rgb = (float3)(c, x, 0);
+    } else if (60 <= hsv.x && hsv.x < 120) {
+        rgb = (float3)(x, c, 0);
+    } else if (120 <= hsv.x && hsv.x < 180) {
+        rgb = (float3)(0, c, x);
+    } else if (180 <= hsv.x && hsv.x < 240) {
+        rgb = (float3)(0, x, c);
+    } else if (240 <= hsv.x && hsv.x < 300) {
+        rgb = (float3)(x, 0, c);
+    } else {
+        rgb = (float3)(c, 0, x);
+    }
+    return (rgb + (hsv.z - c)); //* 255;
+}
+
 // Draws newton fractal
 kernel void newton_fractal(
     // plane bounds
     real min_x, real max_x, real min_y, real max_y,
     // fractal parameters
-    global real* C_const, real t,
+    global real* C_const, int t, real h,
     // how many initial points select
     uint runs_count,
     // how many times solve equation for certain initial point
@@ -32,7 +52,8 @@ kernel void newton_fractal(
     const real2 C = {C_const[0], C_const[1]};
     // color
     #if (DYNAMIC_COLOR)
-        float4 color = {fabs(sin(PI * t / 3.)), fabs(cos(PI * t / 3.)), 0.0, 0.0};
+        float4 color = {fabs(sin(PI * h / 3.)), fabs(cos(PI * h / 3.)), 0.0, 0.0};
+        float3 color_hsv = { 0.0, 1.0, 1.0 };
     #else
         float4 color = {0.0, 0.0, 0.0, 1.0};
     #endif
@@ -50,9 +71,10 @@ kernel void newton_fractal(
     // for each run
     real2 roots[3];
     real2 a;
-    const real2 c = C * (-t) / (3 - t);
-    const real a_modifier = (-3) / (3 - t);
-    const real color_alpha_increment = (real)(1.0 / (points_count + 1));
+    const real2 c = C / (3 - h) * (t < 0 ? -h : 1); // t sign switches between Explicit and Implicit Euler method
+    const real a_modifier = t * 3 / (3 - h);
+    const real max_distance_from_prev = length((real2)(max_x - min_x, max_y - min_y));
+    real total_distance = 0.0;
     // TODO run count was proved to be inefficient. remove?
     for (int run = 0; run < runs_count; ++run) {
         // choose starting point
@@ -63,30 +85,35 @@ kernel void newton_fractal(
         uint is = iter_skip;
         int frozen = 0;
 
-        #if (DYNAMIC_COLOR)
-            //color.w = color_alpha_increment;
-        #endif
-
         // iterate through solutions of cubic equation
         for (int i = 0; i < points_count; ++i) {
             // compute next point:
             a = starting_point * a_modifier;
             uint root_number = (as_uint(random(&rng_state)) >> 7) % 3;
             solve_cubic_newton_fractal_optimized(a, c, 1e-8, root_number, roots);
+            real distance_from_prev = length(starting_point - roots[root_number]);
+            total_distance += distance_from_prev;
             starting_point = roots[root_number];
 
             // the first iter_skip points will  be skipped
             if (is == 0) {
                 // transform coords:
                 coord.x = (starting_point.x - min_x) / scale_x;
-                coord.y = /*image_height - 1 - */(int)((starting_point.y - min_y) / scale_y);
+                coord.y = image_height - 1 - (int)((starting_point.y - min_y) / scale_y);
 
                 // draw next point:
                 #if (DYNAMIC_COLOR)
-                    color.yz -= color_alpha_increment;
+                    //(1 - distance_from_prev / max_distance_from_prev)
+                    color_hsv.x = convert_float(360.0 * (root_number / 3.0));
+                    color_hsv.y = convert_float(1.0 * ((float)(i) / (points_count - iter_skip)));
+                    color_hsv.z = convert_float(1.0 * (total_distance / (max_distance_from_prev * (points_count - iter_skip))));
                 #endif
                 if (coord.x < image_width && coord.y < image_height && coord.x >= 0 && coord.y >= 0) {
-                    write_imagef(out_image, coord, color);
+                    #if DYNAMIC_COLOR
+                        write_imagef(out_image, coord, (float4)(hsv2rgb( color_hsv ), 1.0));
+                    #else
+                        write_imagef(out_image, coord, color);
+                    #endif
                     frozen = 0;
                 } else {
                     if (++frozen > 15) {

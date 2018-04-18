@@ -8,6 +8,7 @@ import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
@@ -34,6 +35,8 @@ public class MainControlPaneController {
     private TextField skipCountTextField;
 
     @FXML
+    private ToggleButton timeDirectionToggle;
+    @FXML
     private Button applyRunSettingsButton;
 
     @FXML
@@ -56,12 +59,12 @@ public class MainControlPaneController {
     private CheckBox doEvolveCheckBox;
     //
     @FXML
-    private CheckBox doEvolveTCheckBox;
+    private CheckBox doEvolveHCheckBox;
     @FXML
-    private Button tEvolutionCustomizeButton;
+    private Button hEvolutionCustomizeButton;
     private Stage tEvolutionCustomizer;
     @FXML
-    private Label tCurrentStateLabel;
+    private Label hCurrentStateLabel;
     //
     @FXML
     private CheckBox doEvolveCRealCheckBox;
@@ -119,7 +122,7 @@ public class MainControlPaneController {
     // ==========================================================================
 
     @FXML
-    private Slider tSlider;
+    private Slider hSlider;
     @FXML
     private Slider cRealSlider;
     @FXML
@@ -138,7 +141,7 @@ public class MainControlPaneController {
         doPostClearCheckBox.setSelected(wrapper.doPostCLear());
 
         setEvolveChecked(wrapper.doEvolve());
-        doEvolveTCheckBox.setSelected(wrapper.getT().evolving());
+        doEvolveHCheckBox.setSelected(wrapper.getH().evolving());
         doEvolveCRealCheckBox.setSelected(wrapper.getcReal().evolving());
         doEvolveCImagCheckBox.setSelected(wrapper.getcImag().evolving());
         setEvolveBoundsChecked(wrapper.doEvolveBounds());
@@ -168,7 +171,29 @@ public class MainControlPaneController {
             //scaleAndClamp(newValue.doubleValue(), wrapper1.getMinX()));
         });
 
-        // tSlider.minProperty().
+        hSlider.setMin(wrapper.getH().getLower());
+        hSlider.setMax(wrapper.getH().getUpper());
+        hSlider.setValue(wrapper.getH().getValue());
+        hSlider.valueProperty().addListener(((observable, oldValue, newValue) -> {
+            MyGLCanvasWrapper wrapper1 = App.getInstance().getWrapper();
+            wrapper1.getH().setValue(newValue.doubleValue());
+        }));
+
+        cRealSlider.setMin(wrapper.getcReal().getLower());
+        cRealSlider.setMax(wrapper.getcReal().getUpper());
+        cRealSlider.setValue(wrapper.getcReal().getValue());
+        cRealSlider.valueProperty().addListener((observable, oldValue, newValue) -> {
+            MyGLCanvasWrapper wrapper1 = App.getInstance().getWrapper();
+            wrapper1.getcReal().setValue(newValue.doubleValue());
+        });
+
+        cImagSlider.setMin(wrapper.getcImag().getLower());
+        cImagSlider.setMax(wrapper.getcImag().getUpper());
+        cImagSlider.setValue(wrapper.getcImag().getValue());
+        cImagSlider.valueProperty().addListener((observable, oldValue, newValue) -> {
+            MyGLCanvasWrapper wrapper1 = App.getInstance().getWrapper();
+            wrapper1.getcImag().setValue(newValue.doubleValue());
+        });
 
         // set up parameter watcher thread
         // TODO this thread is needed to make mainloop more lightweight. probably it doesnt matter?
@@ -176,7 +201,7 @@ public class MainControlPaneController {
             while (watcherRunning) {
                 MyGLCanvasWrapper wrapper1 = App.getInstance().getWrapper();
 
-                String tText = String.format("t = %.12g", wrapper1.getT().getValue());
+                String tText = String.format("t = %.12g", wrapper1.getH().getValue());
                 String cRealText = String.format("cReal = %.12g", wrapper1.getcReal().getValue());
                 String cImagText = String.format("cImag = %.12g", wrapper1.getcImag().getValue());
                 String minXText = String.format("minX = %.12g", wrapper1.getMinX().getValue());
@@ -185,7 +210,7 @@ public class MainControlPaneController {
                 String maxYText = String.format("maxY = %.12g", wrapper1.getMaxY().getValue());
 
                 Platform.runLater(() -> {
-                    tCurrentStateLabel.setText(tText);
+                    hCurrentStateLabel.setText(tText);
                     cRealCurrentStateLabel.setText(cRealText);
                     cImagCurrentStateLabel.setText(cImagText);
                     xMinCurrentStateLabel.setText(minXText);
@@ -248,13 +273,13 @@ public class MainControlPaneController {
         App.getInstance().getWrapper().setDoCLClear(doCLClearCheckBox.isSelected());
     }
 
-    public void doEvolveTCheckBoxClicked() {
-        App.getInstance().getWrapper().getT().setDoEvolve(doEvolveTCheckBox.isSelected());
+    public void doEvolveHCheckBoxClicked() {
+        App.getInstance().getWrapper().getH().setDoEvolve(doEvolveHCheckBox.isSelected());
     }
 
-    public void tEvolutionCustomizeButtonClicked() {
+    public void hEvolutionCustomizeButtonClicked() {
         if (tEvolutionCustomizer == null) {
-            tEvolutionCustomizer = createCustomizer("t", App.getInstance().getWrapper().getT());
+            tEvolutionCustomizer = createCustomizer("t", App.getInstance().getWrapper().getH());
         }
         tEvolutionCustomizer.show();
         tEvolutionCustomizer.toFront();
@@ -434,5 +459,14 @@ public class MainControlPaneController {
     public void saveImageButtonClicked() {
         App.getInstance().getWrapper().setSaveScreenshot(true);
         // saveImageButton.setDisable(true);
+    }
+
+    public void timeDirectionToggled(MouseEvent actionEvent) {
+        int newValue = App.getInstance().getWrapper().toggleT();
+        if (newValue > 0) {
+            timeDirectionToggle.setText("Switch to n -> n+1");
+        } else {
+            timeDirectionToggle.setText("Switch to n+1 -> n");
+        }
     }
 }
