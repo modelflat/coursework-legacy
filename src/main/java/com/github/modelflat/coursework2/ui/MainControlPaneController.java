@@ -37,6 +37,8 @@ public class MainControlPaneController {
     @FXML
     private ToggleButton timeDirectionToggle;
     @FXML
+    public ToggleButton tToggleButton;
+    @FXML
     private Button applyRunSettingsButton;
 
     @FXML
@@ -462,11 +464,20 @@ public class MainControlPaneController {
     }
 
     public void timeDirectionToggled(MouseEvent actionEvent) {
+        boolean newValue = App.getInstance().getWrapper().toggleDirection();
+        if (!newValue) {
+            timeDirectionToggle.setText("n -> n+1");
+        } else {
+            timeDirectionToggle.setText("n+1 -> n");
+        }
+    }
+
+    public void tToggle(MouseEvent mouseEvent) {
         int newValue = App.getInstance().getWrapper().toggleT();
         if (newValue > 0) {
-            timeDirectionToggle.setText("Switch to n -> n+1");
+            tToggleButton.setText("t = 1");
         } else {
-            timeDirectionToggle.setText("Switch to n+1 -> n");
+            tToggleButton.setText("t = -1");
         }
     }
 }

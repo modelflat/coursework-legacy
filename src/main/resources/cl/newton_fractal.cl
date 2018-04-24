@@ -34,7 +34,7 @@ kernel void newton_fractal(
     // plane bounds
     real min_x, real max_x, real min_y, real max_y,
     // fractal parameters
-    global real* C_const, int t, real h,
+    global real* C_const, int backward, int t, real h,
     // how many initial points select
     uint runs_count,
     // how many times solve equation for certain initial point
@@ -71,8 +71,8 @@ kernel void newton_fractal(
     // for each run
     real2 roots[3];
     real2 a;
-    const real2 c = C / (3 - h) * (t < 0 ? -h : 1); // t sign switches between Explicit and Implicit Euler method
-    const real a_modifier = t * 3 / (3 - h);
+    const real2 c = -C * h * t / (3 - t * h); // t sign switches between Explicit and Implicit Euler method
+    const real a_modifier = -3 / (3 - t * h);
     const real max_distance_from_prev = length((real2)(max_x - min_x, max_y - min_y));
     real total_distance = 0.0;
     // TODO run count was proved to be inefficient. remove?
@@ -88,13 +88,28 @@ kernel void newton_fractal(
         // iterate through solutions of cubic equation
         for (int i = 0; i < points_count; ++i) {
             // compute next point:
-            a = starting_point * a_modifier;
-            uint root_number = (as_uint(random(&rng_state)) >> 7) % 3;
-            solve_cubic_newton_fractal_optimized(a, c, 1e-8, root_number, roots);
-            real distance_from_prev = length(starting_point - roots[root_number]);
-            total_distance += distance_from_prev;
-            starting_point = roots[root_number];
+            if (backward) {
+                a = starting_point * a_modifier;
+                uint root_number = (as_uint(random(&rng_state)) >> 7) % 3;
+                solve_cubic_newton_fractal_optimized(a, c, 1e-8, root_number, roots);
 
+                real distance_from_prev = length(starting_point - roots[root_number]);
+                total_distance += distance_from_prev;
+
+                starting_point = roots[root_number];
+            } else {
+                a = starting_point;
+                real2 under = { 3*(a.x*a.x - a.y*a.y), 6*(a.x*a.y) };
+                real2 over = {
+                    -C.x*t*h + (3 - t*h) * ( a.x*a.x*a.x - 3*a.y*a.y*a.x ),
+                    -C.y*t*h + (3 - t*h) * (3*a.x*a.x*a.y - a.y*a.y*a.y)
+                };
+
+                starting_point = cdiv( under, over );
+
+                real distance_from_prev = length(starting_point - a);
+                total_distance += distance_from_prev;
+            }
             // the first iter_skip points will  be skipped
             if (is == 0) {
                 // transform coords:

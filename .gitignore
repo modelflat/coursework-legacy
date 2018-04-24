@@ -1,3 +1,6 @@
+*.webm
+*.avi
+
 # Created by .ignore support plugin (hsz.mobi)
 ### Gradle template
 .gradle

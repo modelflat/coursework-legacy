@@ -53,17 +53,26 @@ public class NewtonKernelWrapper {
         kernel.setArg(4, cCLBuffer);
     }
 
-    public void setH(double h) {
-        kernel.setArg(6, h);
+    public void setBackwards(boolean b) {
+        kernel.setArg(5, b ? 1 : 0);
     }
 
-    public void setT(int t) { kernel.setArg(5, t); }
+    public void setT(int t) { kernel.setArg(6, t); }
+
+    public void setH(double h) {
+        kernel.setArg(7, h);
+    }
 
     public void setRunParams(int workItems, int runCount, int iterCount, int skipCount) {
         this.workItems = workItems;
-        kernel.setArg(7, runCount);
-        kernel.setArg(8, iterCount);
-        kernel.setArg(9, skipCount);
+        kernel.setArg(8, runCount);
+        kernel.setArg(9, iterCount);
+        kernel.setArg(10, skipCount);
+    }
+
+    public CLCommandQueue runOn(CLCommandQueue queue) {
+        kernel.setArg(11, rng.nextLong());
+        return queue.put1DRangeKernel(kernel, 0, workItems, 0);
     }
 
     public void setColor(float r, float g, float b, float a) {
@@ -74,16 +83,11 @@ public class NewtonKernelWrapper {
         if (colorCLBuffer == null) {
             colorCLBuffer = context.createBuffer(colorBuffer, CLMemory.Mem.USE_BUFFER, CLMemory.Mem.READ_ONLY);
         }
-        kernel.setArg(11, colorCLBuffer);
+        kernel.setArg(12, colorCLBuffer);
     }
 
     public void setImage(CLGLImage2d image) {
-        kernel.setArg(12, image);
-    }
-
-    public CLCommandQueue runOn(CLCommandQueue queue) {
-        kernel.setArg(10, rng.nextLong());
-        return queue.put1DRangeKernel(kernel, 0, workItems, 0);
+        kernel.setArg(13, image);
     }
 
     public int getDefaultIterCount() {

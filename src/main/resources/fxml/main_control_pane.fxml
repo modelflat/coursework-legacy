@@ -15,7 +15,7 @@
 
 <AnchorPane cache="true" cacheHint="SPEED" depthTest="DISABLE" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" pickOnBounds="false" prefHeight="634.0" prefWidth="300.0" xmlns="http://javafx.com/javafx/8.0.121" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.github.modelflat.coursework2.ui.MainControlPaneController">
     <VBox layoutX="10.0" layoutY="10.0" prefHeight="504.0" prefWidth="300.0">
-        <VBox cache="true" cacheHint="SPEED" pickOnBounds="false" prefHeight="152.0" prefWidth="300.0">
+        <VBox cache="true" cacheHint="SPEED" pickOnBounds="false" prefHeight="214.0" prefWidth="287.0">
             <CheckBox fx:id="doCLClearCheckBox" mnemonicParsing="false" onMouseClicked="#doCLClearCheckBoxClicked" selected="true" text="Perform CL clear">
                 <VBox.margin>
                     <Insets bottom="10.0" />
@@ -31,7 +31,8 @@
                     <Insets bottom="10.0" />
                 </VBox.margin>
             </CheckBox>
-         <ToggleButton fx:id="timeDirectionToggle" maxHeight="1.7976931348623157E308" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" mnemonicParsing="false" onMouseClicked="#timeDirectionToggled" prefHeight="25.0" prefWidth="290.0" text="Switch to n -&gt; n+1" VBox.vgrow="ALWAYS" />
+         <ToggleButton fx:id="timeDirectionToggle" maxHeight="1.7976931348623157E308" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" mnemonicParsing="false" onMouseClicked="#timeDirectionToggled" prefHeight="25.0" prefWidth="281.0" text="n +1 -&gt; n" VBox.vgrow="ALWAYS" />
+         <ToggleButton fx:id="tToggleButton" mnemonicParsing="false" prefHeight="25.0" prefWidth="281.0" text="t = 1" onMouseClicked="#tToggle" />
             <FlowPane prefHeight="200.0" prefWidth="200.0">
                 <Label text="work items:">
                     <padding>

@@ -74,15 +74,16 @@ public class MyGLCanvasWrapper implements GLEventListener {
     private int postClearProgram;
     private GLCanvas canvas;
     private boolean doEvolveBounds = true;
-    private EvolvableParameter minX = new EvolvableParameter(false, -1.2, 0.0, -10.0, 0.0);
-    private EvolvableParameter maxX = new EvolvableParameter(false, 1.2, -0.0, 0.0, 10.0);
-    private EvolvableParameter minY = new EvolvableParameter(false, -1.2, 0.0, -10.0, 0.0);
-    private EvolvableParameter maxY = new EvolvableParameter(false, 1.2, -0.0, -0.0, 10.0);
+    private EvolvableParameter minX = new EvolvableParameter(false, -1, 0.0, -10.0, 0.0);
+    private EvolvableParameter maxX = new EvolvableParameter(false, 1, -0.0, 0.0, 10.0);
+    private EvolvableParameter minY = new EvolvableParameter(false, -1, 0.0, -10.0, 0.0);
+    private EvolvableParameter maxY = new EvolvableParameter(false, 1, -0.0, -0.0, 10.0);
     private int t = 1;
-    private EvolvableParameter h = new EvolvableParameter(true,
+    private boolean direction = true;
+    private EvolvableParameter h = new EvolvableParameter(false,
             new ApproachingEvolutionStrategy(
-                    ApproachingEvolutionStrategy.InternalStrategy.STOP_AT_POINT_OF_INTEREST, 10),
-            -1, .01, -1.0, 10.0);
+                    ApproachingEvolutionStrategy.InternalStrategy.STOP_AT_POINT_OF_INTEREST, .4),
+            -0.4, .001, -10.0, 10);
     private EvolvableParameter cReal = new EvolvableParameter(false, .5, -.05, -1.0, 1.0);
     private EvolvableParameter cImag = new EvolvableParameter(false, -.5, .05, -1.0, 1.0);
     private boolean doCLClear = true;
@@ -148,6 +149,7 @@ public class MyGLCanvasWrapper implements GLEventListener {
         newtonKernelWrapper.setC(cReal.getValue(), cImag.getValue());
         newtonKernelWrapper.setH(h.getValue());
         newtonKernelWrapper.setT(t);
+        newtonKernelWrapper.setBackwards(direction);
         newtonKernelWrapper.setImage(imageCL);
 
         clearKernel.setArg(0, imageCL);
@@ -216,18 +218,6 @@ public class MyGLCanvasWrapper implements GLEventListener {
                 logFile.println(h.getValue() + "\t" + dResult);
             }
             cd = (nanoTime() - cd);
-
-            if (doEvolve) {
-                ev = nanoTime();
-                evolve();
-                ev = (nanoTime() - ev);
-
-                as = nanoTime();
-                if (autoscale) {
-                    autoscale();
-                }
-                as = (nanoTime() - as);
-            }
         }
 
         if (saveScreenshot) {
@@ -239,13 +229,27 @@ public class MyGLCanvasWrapper implements GLEventListener {
                     minX.getValue() + "," + minY.getValue() + "," + maxX.getValue() + "," + maxY.getValue();
             SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
             try {
-                saveScreenshot(String.format("./result/%04d.png", cnt), h.getValue());//+ format.format(new Date()) + "(" + info + ").png");
+                saveScreenshot(String.format("./result/%05d.png", cnt), h.getValue());//+ format.format(new Date()) + "(" + info + ").png");
                 ++cnt;
             } catch (IOException e) {
                 System.err.println("unable to save screenshot: " + e.getMessage());
             }
             queue.putReleaseGLObject(imageCL);
             //saveScreenshot = false;
+        }
+
+        if (doRecomputeFractal) { // separated to include saveScreenshot logic (above)
+            if (doEvolve) {
+                ev = nanoTime();
+                evolve();
+                ev = (nanoTime() - ev);
+
+                as = nanoTime();
+                if (autoscale) {
+                    autoscale();
+                }
+                as = (nanoTime() - as);
+            }
         }
 
         if (profile) {
@@ -574,6 +578,12 @@ public class MyGLCanvasWrapper implements GLEventListener {
         t = -t;
         newtonKernelWrapper.setT(t);
         return t;
+    }
+
+    public boolean toggleDirection() {
+        direction = !direction;
+        newtonKernelWrapper.setBackwards(direction);
+        return direction;
     }
 
     public NewtonKernelWrapper getNewtonKernelWrapper() {
