@@ -83,7 +83,7 @@ public class MyGLCanvasWrapper implements GLEventListener {
     private EvolvableParameter h = new EvolvableParameter(false,
             new ApproachingEvolutionStrategy(
                     ApproachingEvolutionStrategy.InternalStrategy.STOP_AT_POINT_OF_INTEREST, .4),
-            -0.4, .001, -10.0, 10);
+            1.0, .001, 0, 10);
     private EvolvableParameter cReal = new EvolvableParameter(false, .5, -.05, -1.0, 1.0);
     private EvolvableParameter cImag = new EvolvableParameter(false, -.5, .05, -1.0, 1.0);
     private boolean doCLClear = true;
@@ -235,7 +235,7 @@ public class MyGLCanvasWrapper implements GLEventListener {
                 System.err.println("unable to save screenshot: " + e.getMessage());
             }
             queue.putReleaseGLObject(imageCL);
-            //saveScreenshot = false;
+            saveScreenshot = false;
         }
 
         if (doRecomputeFractal) { // separated to include saveScreenshot logic (above)
@@ -467,9 +467,9 @@ public class MyGLCanvasWrapper implements GLEventListener {
         g2d.setFont(f);
         Rectangle2D metrics = f.getStringBounds(line, g2d.getFontRenderContext());
         g2d.setBackground(new Color(255,255,255));
-        g2d.fillRect(3,0, (int)metrics.getWidth() + 2, (int)metrics.getHeight() + 2);
-        g2d.setColor(new Color(0, 120, 244));
-        g2d.drawString(line, 4, 24);
+//        g2d.fillRect(3,0, (int)metrics.getWidth() + 2, (int)metrics.getHeight() + 2);
+//        g2d.setColor(new Color(0, 120, 244));
+//        g2d.drawString(line, 4, 24);
         ImageIO.write(SwingFXUtils.fromFXImage(SwingFXUtils.toFXImage(im, null), null), "png",
                 new File(filename));
     }
