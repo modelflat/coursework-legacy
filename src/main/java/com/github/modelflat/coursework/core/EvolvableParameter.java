@@ -1,4 +1,4 @@
-package com.github.modelflat.coursework2.core;
+package com.github.modelflat.coursework.core;
 
 import static java.lang.Math.abs;
 

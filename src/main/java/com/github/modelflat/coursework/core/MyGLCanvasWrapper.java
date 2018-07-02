@@ -1,9 +1,9 @@
-package com.github.modelflat.coursework2.core;
+package com.github.modelflat.coursework.core;
 
-import com.github.modelflat.coursework2.BoxCountingCalculator;
-import com.github.modelflat.coursework2.util.GLUtil;
-import com.github.modelflat.coursework2.util.NoSuchResourceException;
-import com.github.modelflat.coursework2.util.Util;
+import com.github.modelflat.coursework.BoxCountingCalculator;
+import com.github.modelflat.coursework.util.GLUtil;
+import com.github.modelflat.coursework.util.NoSuchResourceException;
+import com.github.modelflat.coursework.util.Util;
 import com.jogamp.opencl.*;
 import com.jogamp.opencl.gl.CLGLContext;
 import com.jogamp.opencl.gl.CLGLImage2d;
@@ -13,16 +13,12 @@ import com.jogamp.opengl.util.FPSAnimator;
 import com.jogamp.opengl.util.GLBuffers;
 import com.jogamp.opengl.util.texture.Texture;
 import javafx.embed.swing.SwingFXUtils;
-import javafx.scene.SnapshotParameters;
-import javafx.scene.canvas.Canvas;
 import javafx.scene.image.PixelFormat;
 import javafx.scene.image.PixelWriter;
 import javafx.scene.image.WritableImage;
 
 import javax.imageio.ImageIO;
-import javax.swing.*;
 import java.awt.*;
-import java.awt.font.LineMetrics;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -32,7 +28,6 @@ import java.io.PrintStream;
 import java.nio.IntBuffer;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.concurrent.CyclicBarrier;
 
 import static com.jogamp.opencl.CLProgram.define;
 import static com.jogamp.opengl.GL.GL_COLOR_BUFFER_BIT;

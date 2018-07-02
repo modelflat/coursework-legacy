@@ -1,8 +1,8 @@
-package com.github.modelflat.coursework2.ui;
+package com.github.modelflat.coursework.ui;
 
-import com.github.modelflat.coursework2.core.EvolvableParameter;
-import com.github.modelflat.coursework2.util.NoSuchResourceException;
-import com.github.modelflat.coursework2.util.Util;
+import com.github.modelflat.coursework.core.EvolvableParameter;
+import com.github.modelflat.coursework.util.NoSuchResourceException;
+import com.github.modelflat.coursework.util.Util;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Slider;

@@ -1,4 +1,4 @@
-package com.github.modelflat.coursework2;
+package com.github.modelflat.coursework;
 
 import javafx.scene.image.Image;
 import javafx.scene.image.PixelReader;

@@ -4,7 +4,6 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.util.Random;
 
@@ -15,7 +14,7 @@ import static org.testng.Assert.assertEquals;
  */
 public class TestOpenCLRandom {
 
-    private static final int CL_PLATFORM_IDX = 1;
+    private static final int DEFAULT_CL_PLATFORM_IDX = 0;
     private static final int SAMPLES_COUNT = 1000;
     private static final int WORK_SIZE = 1000;
     private static final float ALLOWED_UNIFORM_DEVIATION = .05f;
@@ -26,7 +25,7 @@ public class TestOpenCLRandom {
 
     @BeforeClass
     public void beforeClass() {
-        CLPlatform platform = CLPlatform.listCLPlatforms()[CL_PLATFORM_IDX];
+        CLPlatform platform = CLPlatform.listCLPlatforms()[DEFAULT_CL_PLATFORM_IDX];
         System.out.println(platform);
         device = platform.getMaxFlopsDevice(CLDevice.Type.GPU);
         System.out.println(device);

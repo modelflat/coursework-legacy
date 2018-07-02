@@ -1,12 +1,10 @@
-package com.github.modelflat.coursework2;
+package com.github.modelflat.coursework;
 
-import com.github.modelflat.coursework2.core.MyGLCanvasWrapper;
-import com.github.modelflat.coursework2.networking.Forismatic;
-import com.github.modelflat.coursework2.ui.MainWindowEventHandler;
-import com.github.modelflat.coursework2.util.GLUtil;
-import com.github.modelflat.coursework2.util.NoSuchResourceException;
-import com.github.modelflat.coursework2.util.Util;
-import com.jogamp.opengl.GLContext;
+import com.github.modelflat.coursework.core.MyGLCanvasWrapper;
+import com.github.modelflat.coursework.networking.Forismatic;
+import com.github.modelflat.coursework.ui.MainWindowEventHandler;
+import com.github.modelflat.coursework.util.NoSuchResourceException;
+import com.github.modelflat.coursework.util.Util;
 import com.jogamp.opengl.util.FPSAnimator;
 import javafx.application.Platform;
 import javafx.embed.swing.JFXPanel;

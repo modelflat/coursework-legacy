@@ -1,4 +1,4 @@
-package com.github.modelflat.coursework2.ui;
+package com.github.modelflat.coursework.ui;
 
 import com.jogamp.opengl.util.FPSAnimator;
 

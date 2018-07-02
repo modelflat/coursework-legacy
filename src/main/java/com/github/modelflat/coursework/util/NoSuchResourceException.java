@@ -1,4 +1,4 @@
-package com.github.modelflat.coursework2.util;
+package com.github.modelflat.coursework.util;
 
 /**
  * Created on 06.05.2017.

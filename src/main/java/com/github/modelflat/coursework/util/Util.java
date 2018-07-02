@@ -1,4 +1,4 @@
-package com.github.modelflat.coursework2.util;
+package com.github.modelflat.coursework.util;
 
 import javafx.fxml.FXMLLoader;
 
@@ -6,6 +6,10 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * Created on 06.05.2017.
@@ -48,6 +52,32 @@ public class Util {
             throw new NoSuchResourceException(e);
         }
         return builder.toString();
+    }
+
+    public static String loadSourceWithIncludes(String name) throws NoSuchResourceException {
+        StringBuilder builder = new StringBuilder();
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(
+                FXMLLoader.getDefaultClassLoader().getResourceAsStream(name)))) {
+//            List<String> includes = br.lines().filter(line -> line.trim().startsWith("#include")).map(Util::getIncludeNameFromIncludeLine).collect(Collectors.toList());
+//            for (String include : includes) {
+//                // each line could throw an exception so do it in plain old foreach
+//                builder.append("\n\n").append(loadSourceWithIncludes(include, prefix + "/" + "include")).append("\n\n");
+//            }
+            br.lines().forEach(builder::append);
+        } catch (IOException e) {
+            throw new NoSuchResourceException(e);
+        }
+        return builder.toString();
+    }
+
+    private static Pattern includePattern = Pattern.compile("#include \"([a-zA-Z0-9_/.]+)\"");
+
+    private static String getIncludeNameFromIncludeLine(String line) {
+        Matcher matcher = includePattern.matcher(line);
+        if (!matcher.find()) {
+            System.err.println(String.format("OpenCL include string \"%s\" is invalid!", line));
+        }
+        return matcher.group(1);
     }
 
 }

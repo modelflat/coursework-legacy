@@ -1,4 +1,4 @@
-package com.github.modelflat.coursework2.util;
+package com.github.modelflat.coursework.util;
 
 import com.jogamp.opencl.CLDevice;
 import com.jogamp.opencl.CLPlatform;

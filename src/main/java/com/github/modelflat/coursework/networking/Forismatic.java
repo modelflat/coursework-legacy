@@ -1,4 +1,4 @@
-package com.github.modelflat.coursework2.networking;
+package com.github.modelflat.coursework.networking;
 
 import okhttp3.ResponseBody;
 import retrofit2.Call;

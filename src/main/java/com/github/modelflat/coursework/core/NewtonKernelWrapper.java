@@ -1,4 +1,4 @@
-package com.github.modelflat.coursework2.core;
+package com.github.modelflat.coursework.core;
 
 import com.jogamp.opencl.*;
 import com.jogamp.opencl.gl.CLGLImage2d;

@@ -13,7 +13,7 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<AnchorPane cache="true" cacheHint="SPEED" depthTest="DISABLE" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" pickOnBounds="false" prefHeight="634.0" prefWidth="300.0" xmlns="http://javafx.com/javafx/8.0.121" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.github.modelflat.coursework2.ui.MainControlPaneController">
+<AnchorPane cache="true" cacheHint="SPEED" depthTest="DISABLE" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" pickOnBounds="false" prefHeight="634.0" prefWidth="300.0" xmlns="http://javafx.com/javafx/8.0.121" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.github.modelflat.coursework.ui.MainControlPaneController">
     <VBox layoutX="10.0" layoutY="10.0" prefHeight="504.0" prefWidth="300.0">
         <VBox cache="true" cacheHint="SPEED" pickOnBounds="false" prefHeight="214.0" prefWidth="287.0">
             <CheckBox fx:id="doCLClearCheckBox" mnemonicParsing="false" onMouseClicked="#doCLClearCheckBoxClicked" selected="true" text="Perform CL clear">

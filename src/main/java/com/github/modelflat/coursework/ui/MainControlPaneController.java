@@ -1,9 +1,9 @@
-package com.github.modelflat.coursework2.ui;
+package com.github.modelflat.coursework.ui;
 
-import com.github.modelflat.coursework2.App;
-import com.github.modelflat.coursework2.core.EvolvableParameter;
-import com.github.modelflat.coursework2.core.MyGLCanvasWrapper;
-import com.github.modelflat.coursework2.util.NoSuchResourceException;
+import com.github.modelflat.coursework.App;
+import com.github.modelflat.coursework.core.EvolvableParameter;
+import com.github.modelflat.coursework.core.MyGLCanvasWrapper;
+import com.github.modelflat.coursework.util.NoSuchResourceException;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.Scene;
