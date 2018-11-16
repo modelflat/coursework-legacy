@@ -71,8 +71,11 @@ kernel void newton_fractal(
     // for each run
     real2 roots[3];
     real2 a;
-    const real2 c = -C * h * t / (3 - t * h); // t sign switches between Explicit and Implicit Euler method
-    const real a_modifier = -3 / (3 - t * h);
+    // const real2 c = -C * h * t / (3 - t * h); // t sign switches between Explicit and Implicit Euler method
+    const real alpha = .5;
+    const real2 c = (alpha + 1.0 / ( 1 - h )) * alpha * C;
+    // const real a_modifier = -3 / (3 - t * h);
+    const real2 b_modifier = { -(1.0 / (h - h*h)), 0.0 };
     const real max_distance_from_prev = length((real2)(max_x - min_x, max_y - min_y));
     real total_distance = 0.0;
     // TODO run count was proved to be inefficient. remove?
@@ -90,23 +93,51 @@ kernel void newton_fractal(
             // compute next point:
             uint root_number = (as_uint(random(&rng_state)) >> 7) % 3;
             if (backward) {
-                a = starting_point * a_modifier;
-                solve_cubic_newton_fractal_optimized(a, c, 1e-8, root_number, roots);
+                // a = starting_point * a_modifier;
+                const real2 zn = starting_point;
+                // solve_cubic_newton_fractal_optimized(a, c, 1e-8, root_number, roots);
+                const real2 zero = {0.0, 0.0};
+                //
+                real2 z_a = alpha * zn;
+                real2 z_a2 = { z_a.x*z_a.x - z_a.y*z_a.y, 2.0*z_a.x*z_a.y };
+                z_a2 += 1.0 / h;
+                const real2 z_na2 = { zn.x*z_a2.x - zn.y*z_a2.y, zn.y*z_a2.x + zn.x*z_a2.y };
+                const real2 c_eq = z_na2 + c;
+                //
+                solve_cubic(zero, b_modifier, c_eq, 1e-8, root_number, roots);
 
                 real distance_from_prev = length(starting_point - roots[root_number]);
                 total_distance += distance_from_prev;
 
                 starting_point = roots[root_number];
             } else {
-                a = starting_point;
-                real2 last = { (a.x*a.x - a.y*a.y), -2*a.x*a.y };
-                last /= (a.x*a.x*a.x*a.x + a.y*a.y*a.y*a.y + 2*a.x*a.x*a.y*a.y);
-                real2 last_mul_C = { last.x*C.x - last.y*C.y, (last.x*C.y + last.y*C.x) };
+                // a = starting_point * a_modifier;
+                const real2 zn = starting_point;
+                // solve_cubic_newton_fractal_optimized(a, c, 1e-8, root_number, roots);
+                const real2 zero = {0.0, 0.0};
+                //
+                real2 z_a = alpha * zn;
+                real2 z_a2 = { z_a.x*z_a.x - z_a.y*z_a.y, 2.0*z_a.x*z_a.y };
+                z_a2 += 1.0 / h;
+                const real2 z_na2 = { zn.x*z_a2.x - zn.y*z_a2.y, zn.y*z_a2.x + zn.x*z_a2.y };
+                const real2 c_eq = z_na2 + c;
+                //
+                solve_cubic(zero, b_modifier, c_eq, 1e-8, root_number, roots);
 
-                real distance_from_prev = length(starting_point - a);
+                real distance_from_prev = length(starting_point - roots[root_number]);
                 total_distance += distance_from_prev;
 
-                starting_point = a - h / 3.0 * a - h*last_mul_C / 3.0;
+                starting_point = roots[root_number];
+
+                //a = starting_point;
+                //real2 last = { (a.x*a.x - a.y*a.y), -2*a.x*a.y };
+                //last /= (a.x*a.x*a.x*a.x + a.y*a.y*a.y*a.y + 2*a.x*a.x*a.y*a.y);
+                //real2 last_mul_C = { last.x*C.x - last.y*C.y, (last.x*C.y + last.y*C.x) };
+//
+                //real distance_from_prev = length(starting_point - a);
+                //total_distance += distance_from_prev;
+//
+                //starting_point = a - h / 3.0 * a - h*last_mul_C / 3.0;
             }
             // the first iter_skip points will  be skipped
             if (is == 0) {
