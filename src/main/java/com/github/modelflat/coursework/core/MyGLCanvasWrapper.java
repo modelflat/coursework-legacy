@@ -11,6 +11,7 @@ import com.jogamp.opengl.*;
 import com.jogamp.opengl.awt.GLCanvas;
 import com.jogamp.opengl.util.FPSAnimator;
 import com.jogamp.opengl.util.GLBuffers;
+import com.jogamp.opengl.util.GLDrawableUtil;
 import com.jogamp.opengl.util.texture.Texture;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.scene.image.PixelFormat;
@@ -19,6 +20,9 @@ import javafx.scene.image.WritableImage;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
+import java.awt.event.MouseMotionListener;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -28,6 +32,7 @@ import java.io.PrintStream;
 import java.nio.IntBuffer;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.jogamp.opencl.CLProgram.define;
 import static com.jogamp.opengl.GL.GL_COLOR_BUFFER_BIT;
@@ -69,18 +74,22 @@ public class MyGLCanvasWrapper implements GLEventListener {
     private int postClearProgram;
     private GLCanvas canvas;
     private boolean doEvolveBounds = true;
-    private EvolvableParameter minX = new EvolvableParameter(false, -1, 0.0, -10.0, 0.0);
-    private EvolvableParameter maxX = new EvolvableParameter(false, 1, -0.0, 0.0, 10.0);
-    private EvolvableParameter minY = new EvolvableParameter(false, -1, 0.0, -10.0, 0.0);
-    private EvolvableParameter maxY = new EvolvableParameter(false, 1, -0.0, -0.0, 10.0);
-    private int t = 1;
-    private boolean direction = true;
+    private EvolvableParameter minX = new EvolvableParameter(false, -2.1, 0.0, -10.0, 0.0);
+    private EvolvableParameter maxX = new EvolvableParameter(false,  2.1, -0.0, 0.0, 10.0);
+    private EvolvableParameter minY = new EvolvableParameter(false, -2.1, 0.0, -10.0, 0.0);
+    private EvolvableParameter maxY = new EvolvableParameter(false,  2.1, -0.0, -0.0, 10.0);
+    private boolean direction = false;
+
     private EvolvableParameter h = new EvolvableParameter(false,
-            new ApproachingEvolutionStrategy(
-                    ApproachingEvolutionStrategy.InternalStrategy.STOP_AT_POINT_OF_INTEREST, .4),
-            1.0, .001, 0, 10);
-    private EvolvableParameter cReal = new EvolvableParameter(false, .5, -.05, -1.0, 1.0);
-    private EvolvableParameter cImag = new EvolvableParameter(false, -.5, .05, -1.0, 1.0);
+            new ApproachingEvolutionStrategy(ApproachingEvolutionStrategy.InternalStrategy.STOP_AT_POINT_OF_INTEREST, 2.5),
+            1, .001,  1, 3);
+
+    private EvolvableParameter alpha = new EvolvableParameter(true,
+            new ApproachingEvolutionStrategy(ApproachingEvolutionStrategy.InternalStrategy.TERMINATE, 3),
+            0, 0.01, -2, 3);
+
+    private EvolvableParameter cReal = new EvolvableParameter(false, 1, -.05, -1.0, 1.0);
+    private EvolvableParameter cImag = new EvolvableParameter(false, 0, .05, -1.0, 1.0);
     private boolean doCLClear = true;
     private boolean doPostCLear = false;
     private boolean doWaitForCL = true;
@@ -93,7 +102,12 @@ public class MyGLCanvasWrapper implements GLEventListener {
     private boolean doComputeD = false;
     private CLBuffer<IntBuffer> count;
     private PrintStream logFile;
-    private boolean saveScreenshot = true;
+    private boolean saveScreenshot = false;
+    private boolean saveOnce = false;
+
+    private AtomicBoolean selecting = new AtomicBoolean(false);
+    private AtomicBoolean needReshape = new AtomicBoolean(false);
+    private Rectangle selectiionRect = new Rectangle(-1, -1, -1, -1);
 
     public MyGLCanvasWrapper(FPSAnimator animator, int width, int height, int canvasWidth, int canvasHeight) {
         this.width = width;
@@ -102,7 +116,51 @@ public class MyGLCanvasWrapper implements GLEventListener {
         canvas = new GLCanvas(
              new GLCapabilities(GLProfile.getMaxProgrammableCore( true ))
         );
+        canvas.addMouseListener(new MouseListener() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+            }
 
+            @Override
+            public void mousePressed(MouseEvent e) {
+                // start selecting
+                selecting.set(true);
+                selectiionRect.setLocation(e.getX(), e.getY());
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                // end selecting
+                if (selecting.getAndSet(false)) {
+                    selectiionRect.setSize(
+                            e.getX() - selectiionRect.getLocation().x,
+                            e.getY() - selectiionRect.getLocation().y);
+                    needReshape.set(true);
+                }
+            }
+
+            @Override
+            public void mouseEntered(MouseEvent e) {
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+            }
+        });
+        canvas.addMouseMotionListener(new MouseMotionListener() {
+            @Override
+            public void mouseDragged(MouseEvent e) {
+            }
+
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                if (selecting.get()) {
+                    selectiionRect.setSize(
+                            e.getX() - selectiionRect.getLocation().x,
+                            e.getY() - selectiionRect.getLocation().y);
+                }
+            }
+        });
         canvas.addGLEventListener(this);
 
         canvas.setSize(canvasWidth, canvasHeight);//width, height);
@@ -143,7 +201,7 @@ public class MyGLCanvasWrapper implements GLEventListener {
         newtonKernelWrapper.setBounds(minX.getValue(), maxX.getValue(), minY.getValue(), maxY.getValue());
         newtonKernelWrapper.setC(cReal.getValue(), cImag.getValue());
         newtonKernelWrapper.setH(h.getValue());
-        newtonKernelWrapper.setT(t);
+        newtonKernelWrapper.setAlpha(alpha.getValue());
         newtonKernelWrapper.setBackwards(direction);
         newtonKernelWrapper.setImage(imageCL);
 
@@ -173,6 +231,7 @@ public class MyGLCanvasWrapper implements GLEventListener {
         GL4 gl = drawable.getGL().getGL4();
 
         long tt = 0, dd = 0, cd = 0, ev = 0, as = 0, pw = 0;
+        double D = Double.NaN;
         if (doRecomputeFractal) {
             queue.putAcquireGLObject(imageCL);
 
@@ -209,13 +268,14 @@ public class MyGLCanvasWrapper implements GLEventListener {
                     }
                 }
                 double dResult = computeD();
+                D = dResult;
                 System.out.println(h.getValue() + "\t" + dResult);
                 logFile.println(h.getValue() + "\t" + dResult);
             }
             cd = (nanoTime() - cd);
         }
 
-        if (saveScreenshot) {
+        if (saveScreenshot || saveOnce) {
             queue.finish();
             queue.putAcquireGLObject(imageCL);
             // refresh image
@@ -224,13 +284,14 @@ public class MyGLCanvasWrapper implements GLEventListener {
                     minX.getValue() + "," + minY.getValue() + "," + maxX.getValue() + "," + maxY.getValue();
             SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
             try {
-                saveScreenshot(String.format("./result/%05d.png", cnt), h.getValue());//+ format.format(new Date()) + "(" + info + ").png");
+                saveScreenshot(String.format("./result/%05d.png", cnt), h.getValue(), D);//+ format.format(new Date()) + "(" + info + ").png");
                 ++cnt;
             } catch (IOException e) {
                 System.err.println("unable to save screenshot: " + e.getMessage());
             }
             queue.putReleaseGLObject(imageCL);
-            saveScreenshot = false;
+
+            saveOnce = false;
         }
 
         if (doRecomputeFractal) { // separated to include saveScreenshot logic (above)
@@ -269,6 +330,27 @@ public class MyGLCanvasWrapper implements GLEventListener {
             }
         }
         // System.out.println((System.nanoTime() - drw) / 1000 + "us");
+
+        if (selecting.get()) {
+            // draw rectangle
+        }
+        if (needReshape.getAndSet(false)) {
+            NewtonKernelWrapper.Rect prev = newtonKernelWrapper.getCurrentBounds();
+            double currentWidth = prev.getMaxX() - prev.getMinX();
+            double currentHeight = prev.getMaxY() - prev.getMinY();
+
+            double minX = currentWidth  * (selectiionRect.getX() / (double)width)   + prev.getMinX();
+            double minY = currentHeight * (1 - selectiionRect.getY() / (double)height)  + prev.getMinY();
+            double maxX = currentWidth  * ((selectiionRect.getX() + selectiionRect.getWidth()) / (double)width)   + prev.getMinX();
+            double maxY = currentHeight * (1 - (selectiionRect.getY() + selectiionRect.getHeight()) / (double)height) + prev.getMinY();
+
+            System.out.println("New selected area: " + minX + "," + minY + "  " + maxX + "," + maxY);
+            this.minX.forceUpdateValue(minX);
+            this.minY.forceUpdateValue(minY);
+            this.maxX.forceUpdateValue(maxX);
+            this.maxY.forceUpdateValue(maxY);
+            newtonKernelWrapper.setBounds(minX, maxX, minY, maxY);
+        }
     }
 
     @Override
@@ -354,6 +436,10 @@ public class MyGLCanvasWrapper implements GLEventListener {
     }
 
     private void evolve() {
+        if (alpha.evolve()) {
+            newtonKernelWrapper.setAlpha(alpha.getValue());
+        }
+
         if (h.evolve()) {
             newtonKernelWrapper.setH(h.getValue());
         }
@@ -448,7 +534,7 @@ public class MyGLCanvasWrapper implements GLEventListener {
         return count.getBuffer().get(0);
     }
 
-    private void saveScreenshot(String filename, double h) throws IOException {
+    private void saveScreenshot(String filename, double h, double D) throws IOException {
         IntBuffer imageBuffer = imageCL.getBuffer();
         WritableImage image = new WritableImage(width, height);
         PixelWriter writer = image.getPixelWriter();
@@ -459,12 +545,15 @@ public class MyGLCanvasWrapper implements GLEventListener {
         Graphics2D g2d = im.createGraphics();
         Font f = new Font(Font.SANS_SERIF, Font.BOLD, 24);
         String line = String.format("h = %g", h);
+        String lineD = String.format("D = %g", D);
         g2d.setFont(f);
         Rectangle2D metrics = f.getStringBounds(line, g2d.getFontRenderContext());
+        metrics.setRect(metrics.getX(), metrics.getY(), metrics.getWidth(), metrics.getHeight()*2);
         g2d.setBackground(new Color(255,255,255));
-//        g2d.fillRect(3,0, (int)metrics.getWidth() + 2, (int)metrics.getHeight() + 2);
-//        g2d.setColor(new Color(0, 120, 244));
-//        g2d.drawString(line, 4, 24);
+        g2d.fillRect(3,0, (int)metrics.getWidth() + 2, (int)metrics.getHeight() + 2);
+        g2d.setColor(new Color(0, 120, 244));
+        g2d.drawString(line, 4, 24);
+        g2d.drawString(lineD, 4, 48);
         ImageIO.write(SwingFXUtils.fromFXImage(SwingFXUtils.toFXImage(im, null), null), "png",
                 new File(filename));
     }
@@ -488,6 +577,8 @@ public class MyGLCanvasWrapper implements GLEventListener {
     public EvolvableParameter getMaxY() {
         return maxY;
     }
+
+    public EvolvableParameter getAlpha() { return alpha; }
 
     public EvolvableParameter getH() {
         return h;
@@ -566,13 +657,7 @@ public class MyGLCanvasWrapper implements GLEventListener {
     }
 
     public void setSaveScreenshot(boolean saveScreenshot) {
-        this.saveScreenshot = saveScreenshot;
-    }
-
-    public int toggleT() {
-        t = -t;
-        newtonKernelWrapper.setT(t);
-        return t;
+        this.saveOnce = saveScreenshot;
     }
 
     public boolean toggleDirection() {

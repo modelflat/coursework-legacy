@@ -13,7 +13,7 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<AnchorPane cache="true" cacheHint="SPEED" depthTest="DISABLE" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" pickOnBounds="false" prefHeight="634.0" prefWidth="300.0" xmlns="http://javafx.com/javafx/8.0.121" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.github.modelflat.coursework.ui.MainControlPaneController">
+<AnchorPane cache="true" cacheHint="SPEED" depthTest="DISABLE" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" pickOnBounds="false" prefHeight="775.0" prefWidth="303.0" xmlns="http://javafx.com/javafx/8.0.121" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.github.modelflat.coursework.ui.MainControlPaneController">
     <VBox layoutX="10.0" layoutY="10.0" prefHeight="504.0" prefWidth="300.0">
         <VBox cache="true" cacheHint="SPEED" pickOnBounds="false" prefHeight="214.0" prefWidth="287.0">
             <CheckBox fx:id="doCLClearCheckBox" mnemonicParsing="false" onMouseClicked="#doCLClearCheckBoxClicked" selected="true" text="Perform CL clear">
@@ -32,7 +32,7 @@
                 </VBox.margin>
             </CheckBox>
          <ToggleButton fx:id="timeDirectionToggle" maxHeight="1.7976931348623157E308" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" mnemonicParsing="false" onMouseClicked="#timeDirectionToggled" prefHeight="25.0" prefWidth="281.0" text="n +1 -&gt; n" VBox.vgrow="ALWAYS" />
-         <ToggleButton fx:id="tToggleButton" mnemonicParsing="false" prefHeight="25.0" prefWidth="281.0" text="t = 1" onMouseClicked="#tToggle" />
+         <!--<ToggleButton fx:id="tToggleButton" mnemonicParsing="false" onMouseClicked="#tToggle" prefHeight="25.0" prefWidth="281.0" text="t = 1" />-->
             <FlowPane prefHeight="200.0" prefWidth="200.0">
                 <Label text="work items:">
                     <padding>
@@ -40,16 +40,6 @@
                     </padding>
                 </Label>
                 <TextField fx:id="workItemsTextField" prefHeight="25.0" prefWidth="64.0" />
-                <Label text="run count:">
-                    <padding>
-                        <Insets left="4.0" />
-                    </padding>
-                </Label>
-                <TextField fx:id="runCountTextField" prefHeight="25.0" prefWidth="64.0">
-                    <FlowPane.margin>
-                        <Insets left="4.0" />
-                    </FlowPane.margin>
-                </TextField>
                 <Label text="iter count:">
                     <padding>
                         <Insets left="4.0" />
@@ -85,6 +75,17 @@
                 <padding>
                     <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                 </padding>
+
+                <!-- Alpha evolution controls -->
+                <HBox prefHeight="40.0" prefWidth="290.0">
+                    <VBox prefHeight="200.0" prefWidth="200.0">
+                        <CheckBox mnemonicParsing="false" text="alpha" fx:id="doEvolveAlphaCheckBox" onMouseClicked="#doEvolveAlphaCheckBoxClicked"/>
+                        <Label text="alpha = ?" fx:id="alphaCurrentStateLabel"/>
+                    </VBox>
+                    <Button mnemonicParsing="false" text="Customize..." fx:id="alphaEvolutionCustomizeButton" onMouseClicked="#alphaEvolutionCustomizeButtonClicked"/>
+                </HBox>
+                <Slider fx:id="alphaSlider" />
+
                 <!-- H evolution controls -->
                 <HBox alignment="BASELINE_LEFT">
                     <padding>
@@ -287,9 +288,9 @@
 
 
             </VBox>
+          <Button fx:id="saveImageButton" mnemonicParsing="false" onMouseClicked="#saveImageButtonClicked" prefHeight="25.0" prefWidth="80.0" text="Save image" />
         </VBox>
     </VBox>
-    <Button fx:id="saveImageButton" layoutX="10.0" layoutY="608.0" mnemonicParsing="false" onMouseClicked="#saveImageButtonClicked" prefHeight="25.0" prefWidth="80.0" text="Save image" />
     <padding>
         <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
     </padding>

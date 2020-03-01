@@ -50,6 +50,9 @@ public class ApproachingEvolutionStrategy implements EvolutionStrategy {
     @Override
     public double evolve(double value, double lower, double upper) {
         if (stopped) {
+            if (strategy == InternalStrategy.TERMINATE) {
+                System.exit(0);
+            }
             return value;
         }
 
@@ -68,6 +71,10 @@ public class ApproachingEvolutionStrategy implements EvolutionStrategy {
                     } else {
                         inc = signum(inc) * abs(abs(value) - abs(pointOfInterest)) * factor;
                     }
+
+                    if (strategy == InternalStrategy.TERMINATE) {
+                        stopped = true;
+                    }
                 }
             } else {
                 switch (strategy) {
@@ -81,6 +88,7 @@ public class ApproachingEvolutionStrategy implements EvolutionStrategy {
                         }
                         break;
                     case STOP_AT_POINT_OF_INTEREST:
+                    case TERMINATE:
                         stopped = true;
                     default:
                         // do nothing
@@ -102,5 +110,5 @@ public class ApproachingEvolutionStrategy implements EvolutionStrategy {
         return value;
     }
 
-    public enum InternalStrategy {STOP_AT_POINT_OF_INTEREST, CYCLE}
+    public enum InternalStrategy {STOP_AT_POINT_OF_INTEREST, CYCLE, TERMINATE}
 }

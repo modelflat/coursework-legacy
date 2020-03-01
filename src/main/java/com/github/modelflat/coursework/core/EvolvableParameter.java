@@ -108,6 +108,12 @@ public class EvolvableParameter {
         dataHasChanged = true;
     }
 
+    public void forceUpdateValue(double newValue) {
+        this.setValue(newValue);
+        this.setLower(Math.min(this.getLower(), newValue));
+        this.setUpper(Math.max(this.getUpper(), newValue));
+    }
+
     /**
      * Increments value on abs(inc) * count, i.e. inc sign is overridden from outside.
      *

@@ -14,10 +14,9 @@ import java.util.Random;
 public class NewtonKernelWrapper {
 
     private final int
-            defaultIterCount = 512,
-            defaultRunCount = 1,
+            defaultIterCount = 8192,
             defaultWorkSize = 8192,
-            defaultSkipCount = 128;
+            defaultSkipCount = 32;
     private DoubleBuffer cBuffer = GLBuffers.newDirectDoubleBuffer(2);
     private CLBuffer<DoubleBuffer> cCLBuffer;
     private FloatBuffer colorBuffer = GLBuffers.newDirectFloatBuffer(4);
@@ -26,6 +25,7 @@ public class NewtonKernelWrapper {
     private CLContext context;
     private Random rng = new Random();
     private int workItems;
+    private Rect currentBounds = new Rect();
 
     public NewtonKernelWrapper() {
     }
@@ -33,11 +33,12 @@ public class NewtonKernelWrapper {
     public void initWith(CLContext context, CLKernel kernel) {
         this.context = context;
         this.kernel = kernel;
-        setRunParams(defaultWorkSize, defaultRunCount, defaultIterCount, defaultSkipCount);
+        setRunParams(defaultWorkSize, defaultIterCount, defaultSkipCount);
         setColor(0.0f, 0.0f, 0.0f, 1.0f);
     }
 
     public void setBounds(double minX, double maxX, double minY, double maxY) {
+        currentBounds = new Rect(minX, maxX, minY, maxY);
         kernel.setArg(0, minX);
         kernel.setArg(1, maxX);
         kernel.setArg(2, minY);
@@ -57,21 +58,26 @@ public class NewtonKernelWrapper {
         kernel.setArg(5, b ? 1 : 0);
     }
 
-    public void setT(int t) { kernel.setArg(6, t); }
-
-    public void setH(double h) {
-        kernel.setArg(7, h);
+    public void setT(int t) {
+        System.err.println("t arg is not supported anymore");
     }
 
-    public void setRunParams(int workItems, int runCount, int iterCount, int skipCount) {
+    public void setH(double h) {
+        kernel.setArg(6, h);
+    }
+
+    public void setAlpha(double alpha) {
+        kernel.setArg(7, alpha);
+    }
+
+    public void setRunParams(int workItems, int iterCount, int skipCount) {
         this.workItems = workItems;
-        kernel.setArg(8, runCount);
-        kernel.setArg(9, iterCount);
-        kernel.setArg(10, skipCount);
+        kernel.setArg(8, iterCount);
+        kernel.setArg(9, skipCount);
     }
 
     public CLCommandQueue runOn(CLCommandQueue queue) {
-        kernel.setArg(11, rng.nextLong());
+        kernel.setArg(10, rng.nextLong());
         return queue.put1DRangeKernel(kernel, 0, workItems, 0);
     }
 
@@ -83,19 +89,15 @@ public class NewtonKernelWrapper {
         if (colorCLBuffer == null) {
             colorCLBuffer = context.createBuffer(colorBuffer, CLMemory.Mem.USE_BUFFER, CLMemory.Mem.READ_ONLY);
         }
-        kernel.setArg(12, colorCLBuffer);
+        kernel.setArg(11, colorCLBuffer);
     }
 
     public void setImage(CLGLImage2d image) {
-        kernel.setArg(13, image);
+        kernel.setArg(12, image);
     }
 
     public int getDefaultIterCount() {
         return defaultIterCount;
-    }
-
-    public int getDefaultRunCount() {
-        return defaultRunCount;
     }
 
     public int getDefaultWorkSize() {
@@ -104,5 +106,39 @@ public class NewtonKernelWrapper {
 
     public int getDefaultSkipCount() {
         return defaultSkipCount;
+    }
+
+    public static class Rect {
+        double minX, maxX, minY, maxY;
+
+        public Rect() {
+        }
+
+        public Rect(double minX, double maxX, double minY, double maxY) {
+            this.minX = minX;
+            this.maxX = maxX;
+            this.minY = minY;
+            this.maxY = maxY;
+        }
+
+        public double getMinX() {
+            return minX;
+        }
+
+        public double getMaxX() {
+            return maxX;
+        }
+
+        public double getMinY() {
+            return minY;
+        }
+
+        public double getMaxY() {
+            return maxY;
+        }
+    }
+
+    public Rect getCurrentBounds() {
+        return currentBounds;
     }
 }

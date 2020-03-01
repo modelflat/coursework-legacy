@@ -22,6 +22,16 @@ import static java.lang.Math.min;
 public class MainControlPaneController {
 
     @FXML
+    public Slider alphaSlider;
+    @FXML
+    public CheckBox doEvolveAlphaCheckBox;
+    @FXML
+    public Label alphaCurrentStateLabel;
+    @FXML
+    public Button alphaEvolutionCustomizeButton;
+    private Stage alphaEvolutionCustomizer;
+
+    @FXML
     private TextField colorTextBox;
     @FXML
     private Button saveImageButton;
@@ -65,6 +75,7 @@ public class MainControlPaneController {
     @FXML
     private Button hEvolutionCustomizeButton;
     private Stage tEvolutionCustomizer;
+
     @FXML
     private Label hCurrentStateLabel;
     //
@@ -153,7 +164,6 @@ public class MainControlPaneController {
         doEvolveYMaxCheckBox.setSelected(wrapper.getMaxY().evolving());
 
         iterCountTextField.setText(wrapper.getNewtonKernelWrapper().getDefaultIterCount() + "");
-        runCountTextField.setText(wrapper.getNewtonKernelWrapper().getDefaultRunCount() + "");
         workItemsTextField.setText(wrapper.getNewtonKernelWrapper().getDefaultWorkSize() + "");
         skipCountTextField.setText(wrapper.getNewtonKernelWrapper().getDefaultSkipCount() + "");
 
@@ -172,6 +182,14 @@ public class MainControlPaneController {
             wrapper1.getMinX().setValue(-newValue.doubleValue());
             //scaleAndClamp(newValue.doubleValue(), wrapper1.getMinX()));
         });
+
+        alphaSlider.setMin(wrapper.getAlpha().getLower());
+        alphaSlider.setMax(wrapper.getAlpha().getUpper());
+        alphaSlider.setValue(wrapper.getAlpha().getValue());
+        alphaSlider.valueProperty().addListener(((observable, oldValue, newValue) -> {
+            MyGLCanvasWrapper wrapper1 = App.getInstance().getWrapper();
+            wrapper1.getAlpha().setValue(newValue.doubleValue());
+        }));
 
         hSlider.setMin(wrapper.getH().getLower());
         hSlider.setMax(wrapper.getH().getUpper());
@@ -203,7 +221,8 @@ public class MainControlPaneController {
             while (watcherRunning) {
                 MyGLCanvasWrapper wrapper1 = App.getInstance().getWrapper();
 
-                String tText = String.format("t = %.12g", wrapper1.getH().getValue());
+                String alphaText = String.format("α = %.12g", wrapper1.getAlpha().getValue());
+                String tText = String.format("h = %.12g", wrapper1.getH().getValue());
                 String cRealText = String.format("cReal = %.12g", wrapper1.getcReal().getValue());
                 String cImagText = String.format("cImag = %.12g", wrapper1.getcImag().getValue());
                 String minXText = String.format("minX = %.12g", wrapper1.getMinX().getValue());
@@ -212,6 +231,7 @@ public class MainControlPaneController {
                 String maxYText = String.format("maxY = %.12g", wrapper1.getMaxY().getValue());
 
                 Platform.runLater(() -> {
+                    alphaCurrentStateLabel.setText(alphaText);
                     hCurrentStateLabel.setText(tText);
                     cRealCurrentStateLabel.setText(cRealText);
                     cImagCurrentStateLabel.setText(cImagText);
@@ -281,10 +301,22 @@ public class MainControlPaneController {
 
     public void hEvolutionCustomizeButtonClicked() {
         if (tEvolutionCustomizer == null) {
-            tEvolutionCustomizer = createCustomizer("t", App.getInstance().getWrapper().getH());
+            tEvolutionCustomizer = createCustomizer("h", App.getInstance().getWrapper().getH());
         }
         tEvolutionCustomizer.show();
         tEvolutionCustomizer.toFront();
+    }
+
+    public void alphaEvolutionCustomizeButtonClicked() {
+        if (alphaEvolutionCustomizer == null) {
+            alphaEvolutionCustomizer= createCustomizer("alpha", App.getInstance().getWrapper().getAlpha());
+        }
+        alphaEvolutionCustomizer.show();
+        alphaEvolutionCustomizer.toFront();
+    }
+
+    public void doEvolveAlphaCheckBoxClicked() {
+        App.getInstance().getWrapper().getAlpha().setDoEvolve(doEvolveAlphaCheckBox.isSelected());
     }
 
     public void doEvolveCRealCheckBoxClicked() {
@@ -384,12 +416,11 @@ public class MainControlPaneController {
     public void applyRunSettingsButtonClicked() {
         try {
             int iterCount = Integer.parseInt(iterCountTextField.getText());
-            int runCount = Integer.parseInt(runCountTextField.getText());
             int workSize = Integer.parseInt(workItemsTextField.getText());
             int skip = Integer.parseInt(skipCountTextField.getText());
 
             App.getInstance().getWrapper().getNewtonKernelWrapper()
-                    .setRunParams(workSize, runCount, iterCount, skip);
+                    .setRunParams(workSize, iterCount, skip);
         } catch (NumberFormatException ignored) {
         }
         String color = colorTextBox.getText();
@@ -472,12 +503,4 @@ public class MainControlPaneController {
         }
     }
 
-    public void tToggle(MouseEvent mouseEvent) {
-        int newValue = App.getInstance().getWrapper().toggleT();
-        if (newValue > 0) {
-            tToggleButton.setText("t = 1");
-        } else {
-            tToggleButton.setText("t = -1");
-        }
-    }
 }
